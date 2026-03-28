@@ -118,31 +118,40 @@ def _parse_articles(html: str) -> list[dict]:
     return articles
 
 
-async def _scroll_and_load(page: Page, scrolls: int = 5) -> None:
+async def _scroll_and_load(page: Page, scrolls: int = 3) -> None:
     for _ in range(scrolls):
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(800)
 
 
-async def scrape_news(max_scrolls: int = 6) -> list[dict]:
+async def scrape_news(max_scrolls: int = 3) -> list[dict]:
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-blink-features=AutomationControlled"],
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-extensions",
+                "--disable-gpu",
+                "--blink-settings=imagesEnabled=false",
+            ],
         )
         context = await browser.new_context(
             user_agent=USER_AGENT,
-            viewport={"width": 1920, "height": 1080},
+            viewport={"width": 1280, "height": 800},
             locale="en-US",
             timezone_id="America/New_York",
+            java_script_enabled=True,
         )
         page = await context.new_page()
 
-        # Block images/fonts to speed up loading
-        await page.route("**/*.{png,jpg,jpeg,gif,webp,svg,woff,woff2,ttf}", lambda r: r.abort())
+        # Block all non-essential resources
+        blocked = {"image", "media", "font", "stylesheet"}
+        await page.route("**/*", lambda r: r.abort() if r.request.resource_type in blocked else r.continue_())
 
-        await page.goto(NEWS_URL, wait_until="domcontentloaded", timeout=60000)
-        await page.wait_for_timeout(3000)
+        await page.goto(NEWS_URL, wait_until="domcontentloaded", timeout=45000)
+        await page.wait_for_timeout(1500)
         await _scroll_and_load(page, max_scrolls)
 
         html = await page.content()

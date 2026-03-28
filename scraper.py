@@ -28,20 +28,22 @@ BANNER = r"""
 
 async def main():
     print(BANNER)
-    print(f"  Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    print("  Fetching: Stocks | Crypto | Forex | Commodities | Indices | News\n")
+    t0 = datetime.now()
+    print(f"  Started at: {t0.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    print("  [1/2] Fetching market data + news concurrently...")
+    async with httpx.AsyncClient(timeout=20) as client:
         (
             stocks, crypto, forex, commodities, indices, news
         ) = await asyncio.gather(
-            fetch("america", STOCK_SYMBOLS,    client),
-            fetch("crypto",  CRYPTO_SYMBOLS,   client),
-            fetch("forex",   FOREX_SYMBOLS,    client),
-            fetch("america", COMMODITY_SYMBOLS, client),
-            fetch("america", INDEX_SYMBOLS,    client),
-            scrape_news(max_scrolls=6),
+            fetch("america", STOCK_SYMBOLS,     client),
+            fetch("crypto",  CRYPTO_SYMBOLS,    client),
+            fetch("forex",   FOREX_SYMBOLS,     client),
+            fetch("global",  COMMODITY_SYMBOLS, client),
+            fetch("global",  INDEX_SYMBOLS,     client),
+            scrape_news(max_scrolls=3),
         )
+    print(f"  [2/2] Done in {(datetime.now()-t0).seconds}s — printing results...")
 
     # ── Print ──────────────────────────────────────────────
     print_stocks(stocks)

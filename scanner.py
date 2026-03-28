@@ -1,5 +1,4 @@
 import httpx
-from typing import Literal
 
 BASE_URL = "https://www.tradingview.com"
 SCANNER_URL = "https://scanner.tradingview.com/{market}/scan"
@@ -88,13 +87,12 @@ FOREX_SYMBOLS = [
 
 COMMODITY_SYMBOLS = [
     "TVC:GOLD", "TVC:SILVER", "TVC:USOIL", "TVC:UKOIL",
-    "TVC:NATURALGAS", "COMEX:HG1!", "CBOT:ZW1!", "CBOT:ZC1!",
+    "TVC:NATURALGAS", "TVC:COPPER",
 ]
 
 INDEX_SYMBOLS = [
     "TVC:SPX", "TVC:NDX", "TVC:DJI", "TVC:RUT",
-    "TVC:VIX", "TVC:DXY", "INDEX:BTCUSD",
-    "TVC:NI225", "TVC:FTSE", "TVC:DAX",
+    "TVC:VIX", "TVC:DXY", "TVC:NI225", "TVC:FTSE", "TVC:DAX",
 ]
 
 
