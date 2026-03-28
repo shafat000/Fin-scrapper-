@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 from playwright.async_api import async_playwright, Page
 from bs4 import BeautifulSoup

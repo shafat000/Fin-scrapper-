@@ -45,7 +45,7 @@ async def main():
             fetch("global",  INDEX_SYMBOLS,     client),
             scrape_news(max_scrolls=3),
         )
-    print(f"  [2/2] Done in {(datetime.now()-t0).seconds}s — printing results...")
+    print(f"  [2/2] Done in {(datetime.now()-t0).seconds}s - printing results...")
 
     # ── Print ──────────────────────────────────────────────
     print_stocks(stocks)
@@ -62,11 +62,11 @@ async def main():
     # ── Summary stats ──────────────────────────────────────
     bullish = sum(1 for n in news if n.get("sentiment") == "bullish")
     bearish = sum(1 for n in news if n.get("sentiment") == "bearish")
-    print(f"\n  News Sentiment → Bullish: {bullish}  Bearish: {bearish}  Neutral: {len(news)-bullish-bearish}")
+    print(f"\n  News Sentiment -> Bullish: {bullish}  Bearish: {bearish}  Neutral: {len(news)-bullish-bearish}")
 
     buy_signals    = sum(1 for s in stocks + crypto if s.get("signal") in ("BUY", "STRONG BUY"))
     sell_signals   = sum(1 for s in stocks + crypto if s.get("signal") in ("SELL", "STRONG SELL"))
-    print(f"  Market Signals → Buy: {buy_signals}  Sell: {sell_signals}")
+    print(f"  Market Signals -> Buy: {buy_signals}  Sell: {sell_signals}")
 
     # ── Export ─────────────────────────────────────────────
     output = {

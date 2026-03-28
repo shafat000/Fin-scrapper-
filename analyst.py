@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 analyst.py — Investment Analysis Engine
 Scores every stock/crypto across 4 dimensions using all available market data.
@@ -11,12 +12,20 @@ W_MOMENTUM    = 0.25
 W_FUNDAMENTAL = 0.20   # stocks only; redistributed for crypto
 W_NEWS        = 0.20
 
+VERDICT_ICONS = {
+    "STRONG BUY":  "** STRONG BUY **",
+    "BUY":         ">> BUY",
+    "HOLD":        "-- HOLD",
+    "SELL":        "<< SELL",
+    "STRONG SELL": "!! STRONG SELL",
+}
+
 VERDICT_LABELS = {
-    (80, 101): ("🟢 STRONG BUY",  "Strong across all dimensions. High conviction entry."),
-    (62,  80): ("🟩 BUY",         "Mostly positive signals. Favorable risk/reward."),
-    (42,  62): ("🟡 HOLD",        "Mixed signals. Wait for clearer confirmation."),
-    (25,  42): ("🟠 SELL",        "Weak technicals or fundamentals. Consider reducing."),
-    (  0, 25): ("🔴 STRONG SELL", "Multiple red flags. High risk of further downside."),
+    (80, 101): ("** STRONG BUY **",  "Strong across all dimensions. High conviction entry."),
+    (62,  80): (">> BUY",            "Mostly positive signals. Favorable risk/reward."),
+    (42,  62): ("-- HOLD",           "Mixed signals. Wait for clearer confirmation."),
+    (25,  42): ("<< SELL",           "Weak technicals or fundamentals. Consider reducing."),
+    (  0, 25): ("!! STRONG SELL",    "Multiple red flags. High risk of further downside."),
 }
 
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import httpx
 
 BASE_URL = "https://www.tradingview.com"
@@ -18,7 +19,7 @@ COLUMNS = [
     "market_cap_basic", "price_earnings_ttm",
     "earnings_per_share_basic_ttm", "dividends_yield_current",
     "sector", "industry",
-    "Recommend.All",                    # overall technical rating (-1 to 1)
+    "Recommend.All",
     "RSI", "RSI[1]",
     "MACD.macd", "MACD.signal",
     "EMA20", "EMA50", "EMA200",
@@ -26,10 +27,10 @@ COLUMNS = [
     "BB.upper", "BB.lower",
     "VWAP",
     "ATR", "beta_1_year",
-    "52_week_high", "52_week_low",
+    "High.All", "Low.All",
     "price_52_week_high", "price_52_week_low",
     "average_volume_10d_calc", "average_volume_30d_calc",
-    "gap", "pre_change", "after_change",
+    "gap", "premarket_change", "postmarket_change",
     "exchange",
 ]
 
@@ -98,7 +99,7 @@ INDEX_SYMBOLS = [
 
 def _build_payload(symbols: list[str]) -> dict:
     return {
-        "symbols": {"tickers": symbols, "query": {"types": []}},
+        "symbols": {"tickers": symbols},
         "columns": COLUMNS,
     }
 
@@ -131,11 +132,15 @@ def _parse(data: dict) -> list[dict]:
 
 
 async def fetch(market: str, symbols: list[str], client: httpx.AsyncClient) -> list[dict]:
-    resp = await client.post(
-        SCANNER_URL.format(market=market),
-        json=_build_payload(symbols),
-        headers=HEADERS,
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return _parse(resp.json())
+    try:
+        resp = await client.post(
+            SCANNER_URL.format(market=market),
+            json=_build_payload(symbols),
+            headers=HEADERS,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return _parse(resp.json())
+    except Exception as e:
+        print(f"  [!] Scanner error ({market}): {e}")
+        return []
