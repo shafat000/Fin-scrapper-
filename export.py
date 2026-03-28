@@ -103,6 +103,54 @@ def print_news(news: list[dict]) -> None:
         print()
 
 
+def print_signals(signals: dict) -> None:
+    for category, label in (("stocks", "STOCKS"), ("crypto", "CRYPTO")):
+        items = signals.get(category, [])
+        if not items:
+            continue
+
+        print(f"\n{'='*100}")
+        print(f"  REAL-TIME TRADING SIGNALS -- {label}")
+        print(f"  {'SYMBOL':<22} {'ACTION':<22} {'CONF':>4}  {'ENTRY':>10} {'STOP':>10} {'STOP%':>7} {'T1':>10} {'T1%':>7} {'T2':>10} {'T2%':>7} {'R/R':>5}")
+        print(f"{'='*100}")
+
+        for s in items:
+            action = s.get("action", "HOLD")
+            stars  = "*" * s.get("confidence", 0)
+            sym    = (s.get("symbol") or "")[:22]
+            price  = s.get("price")
+
+            if s.get("entry") is not None:
+                print(
+                    f"  {sym:<22} {action:<22} {stars:>4}  "
+                    f"${_fmt(s['entry']):>9} "
+                    f"${_fmt(s['stop_loss']):>9} "
+                    f"{str(s['stop_pct'])+'%':>7} "
+                    f"${_fmt(s['target1']):>9} "
+                    f"{str(s['target1_pct'])+'%':>7} "
+                    f"${_fmt(s['target2']):>9} "
+                    f"{str(s['target2_pct'])+'%':>7} "
+                    f"{str(s['rr2'])+'x':>5}"
+                )
+            else:
+                print(f"  {sym:<22} {action:<22} {stars:>4}  ${_fmt(price):>9}")
+
+            for r in s.get("reasons", [])[:3]:
+                print(f"    > {r}")
+            print()
+
+        # Summary
+        buy_now  = [s["symbol"] for s in items if "BUY NOW" == s.get("action")][:5]
+        sell_now = [s["symbol"] for s in items if "SELL NOW" == s.get("action")][:5]
+        buy_     = [s["symbol"] for s in items if s.get("action") == "BUY"][:5]
+        if buy_now:
+            print(f"  [BUY NOW]  : {', '.join(buy_now)}")
+        if buy_:
+            print(f"  [BUY]      : {', '.join(buy_)}")
+        if sell_now:
+            print(f"  [SELL NOW] : {', '.join(sell_now)}")
+
+
 def print_analysis(analysis: dict) -> None:
     for category, label in (("stocks", "STOCKS"), ("crypto", "CRYPTO")):
         items = analysis.get(category, [])

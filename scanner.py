@@ -11,14 +11,12 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-COLUMNS = [
+# Columns supported by all markets (stocks, crypto, forex, commodities, indices)
+COLUMNS_COMMON = [
     "name", "description", "type", "subtype",
     "close", "open", "high", "low",
     "change", "change_abs", "change_from_open",
     "volume", "volume_change", "relative_volume_10d_calc",
-    "market_cap_basic", "price_earnings_ttm",
-    "earnings_per_share_basic_ttm", "dividends_yield_current",
-    "sector", "industry",
     "Recommend.All",
     "RSI", "RSI[1]",
     "MACD.macd", "MACD.signal",
@@ -26,22 +24,29 @@ COLUMNS = [
     "SMA20", "SMA50", "SMA200",
     "BB.upper", "BB.lower",
     "VWAP",
-    "ATR", "beta_1_year",
+    "ATR",
     "High.All", "Low.All",
     "price_52_week_high", "price_52_week_low",
     "average_volume_10d_calc", "average_volume_30d_calc",
-    "gap", "premarket_change", "postmarket_change",
     "exchange",
 ]
 
-COLUMN_NAMES = [
+# Extra columns only available on the stocks/america scanner
+COLUMNS_STOCKS_EXTRA = [
+    "market_cap_basic", "price_earnings_ttm",
+    "earnings_per_share_basic_ttm", "dividends_yield_current",
+    "sector", "industry",
+    "beta_1_year",
+    "gap", "premarket_change", "postmarket_change",
+]
+
+COLUMNS = COLUMNS_COMMON + COLUMNS_STOCKS_EXTRA
+
+COLUMN_NAMES_COMMON = [
     "symbol", "description", "type", "subtype",
     "price", "open", "high", "low",
     "change_%", "change_abs", "change_from_open_%",
     "volume", "volume_change_%", "relative_volume",
-    "market_cap", "pe_ratio",
-    "eps", "dividend_yield_%",
-    "sector", "industry",
     "technical_rating",
     "rsi", "rsi_prev",
     "macd", "macd_signal",
@@ -49,13 +54,22 @@ COLUMN_NAMES = [
     "sma20", "sma50", "sma200",
     "bb_upper", "bb_lower",
     "vwap",
-    "atr", "beta",
+    "atr",
     "52w_high", "52w_low",
     "price_52w_high", "price_52w_low",
     "avg_vol_10d", "avg_vol_30d",
-    "gap_%", "pre_market_change_%", "after_hours_change_%",
     "exchange",
 ]
+
+COLUMN_NAMES_STOCKS_EXTRA = [
+    "market_cap", "pe_ratio",
+    "eps", "dividend_yield_%",
+    "sector", "industry",
+    "beta",
+    "gap_%", "pre_market_change_%", "after_hours_change_%",
+]
+
+COLUMN_NAMES = COLUMN_NAMES_COMMON + COLUMN_NAMES_STOCKS_EXTRA
 
 STOCK_SYMBOLS = [
     # Mega-cap Tech
@@ -97,19 +111,19 @@ INDEX_SYMBOLS = [
 ]
 
 
-def _build_payload(symbols: list[str]) -> dict:
+def _build_payload(symbols: list[str], columns: list[str]) -> dict:
     return {
-        "symbols": {"tickers": symbols},
-        "columns": COLUMNS,
+        "symbols": {"tickers": symbols, "query": {"types": []}},
+        "columns": columns,
     }
 
 
-def _parse(data: dict) -> list[dict]:
+def _parse(data: dict, column_names: list[str]) -> list[dict]:
     results = []
     for row in data.get("data", []):
         vals = row.get("d", [])
         entry = {}
-        for i, key in enumerate(COLUMN_NAMES):
+        for i, key in enumerate(column_names):
             val = vals[i] if i < len(vals) else None
             if isinstance(val, float):
                 val = round(val, 4)
@@ -132,15 +146,18 @@ def _parse(data: dict) -> list[dict]:
 
 
 async def fetch(market: str, symbols: list[str], client: httpx.AsyncClient) -> list[dict]:
+    is_stocks = market == "america"
+    cols      = COLUMNS        if is_stocks else COLUMNS_COMMON
+    col_names = COLUMN_NAMES   if is_stocks else COLUMN_NAMES_COMMON
     try:
         resp = await client.post(
             SCANNER_URL.format(market=market),
-            json=_build_payload(symbols),
+            json=_build_payload(symbols, cols),
             headers=HEADERS,
             timeout=30,
         )
         resp.raise_for_status()
-        return _parse(resp.json())
+        return _parse(resp.json(), col_names)
     except Exception as e:
         print(f"  [!] Scanner error ({market}): {e}")
         return []

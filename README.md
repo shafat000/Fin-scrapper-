@@ -15,11 +15,15 @@ A high-performance, real-time financial data scraper **and investment analysis e
 | Indices | `scanner.tradingview.com/global/scan` | `httpx` async POST |
 | News | `tradingview.com/news/` | Playwright + BeautifulSoup |
 | Analysis | `analyst.py` | Pure Python scoring engine |
+| Signals | `signals.py` | Real-time entry/stop/target generator |
 
 - Market data is fetched from TradingView's **internal scanner API** — the same endpoint their UI uses — so prices are always real-time tick-level.
 - News requires a headless browser because the page is JavaScript-rendered. Playwright scrolls the page to load more articles, then BeautifulSoup parses the HTML.
 - All 6 fetches run **concurrently** via `asyncio.gather`.
-- After fetching, the **analyst engine** scores every stock and crypto using all 46 data fields + news sentiment.
+- After fetching, the **analyst engine** scores every stock and crypto using all available data fields + news sentiment.
+- The **signals engine** converts analyst verdicts into actionable trade setups with entry, stop-loss, and take-profit levels.
+
+> **Scanner API note:** Stocks use the full column set (46 fields including fundamentals). Crypto, forex, commodities, and indices use a reduced common column set — this is required by TradingView's API which rejects stock-only fields on non-equity endpoints.
 
 ---
 
@@ -31,6 +35,7 @@ FIn scrapper/
 ├── scanner.py        # TradingView scanner API — stocks, crypto, forex, commodities, indices
 ├── news.py           # Playwright + BeautifulSoup — news scraper with sentiment & categories
 ├── analyst.py        # Investment analysis engine — scores every instrument 0–100
+├── signals.py        # Real-time trading signals — entry, stop-loss, take-profit levels
 ├── export.py         # Console tables, JSON export, per-category CSV export
 ├── requirements.txt  # Python dependencies
 ├── output.json       # Generated on each run (gitignored)
@@ -78,11 +83,11 @@ python scraper.py
 
 | Score | Verdict | Meaning |
 |-------|---------|---------|
-| 80–100 | 🟢 STRONG BUY | Strong across all dimensions. High conviction entry. |
-| 62–80 | 🟩 BUY | Mostly positive signals. Favorable risk/reward. |
-| 42–62 | 🟡 HOLD | Mixed signals. Wait for clearer confirmation. |
-| 25–42 | 🟠 SELL | Weak technicals or fundamentals. Consider reducing. |
-| 0–25 | 🔴 STRONG SELL | Multiple red flags. High risk of further downside. |
+| 80–100 | `** STRONG BUY **` | Strong across all dimensions. High conviction entry. |
+| 62–80 | `>> BUY` | Mostly positive signals. Favorable risk/reward. |
+| 42–62 | `-- HOLD` | Mixed signals. Wait for clearer confirmation. |
+| 25–42 | `<< SELL` | Weak technicals or fundamentals. Consider reducing. |
+| 0–25 | `!! STRONG SELL` | Multiple red flags. High risk of further downside. |
 
 ### Technical Signals Analyzed
 
@@ -120,56 +125,73 @@ python scraper.py
 
 ---
 
+## 📡 Real-Time Trading Signals
+
+`signals.py` converts analyst verdicts into actionable trade setups:
+
+| Field | Description |
+|-------|-------------|
+| `action` | BUY / SELL / HOLD / WAIT - BULLISH SETUP / WAIT - BEARISH SETUP |
+| `confidence` | `*` (low) or `**` (high) based on signal alignment |
+| `entry` | Current price at signal time |
+| `stop` | Stop-loss level (ATR-based or 5% default) |
+| `stop_%` | Stop distance as % |
+| `t1` / `t1_%` | First take-profit target |
+| `t2` / `t2_%` | Second take-profit target |
+| `rr` | Risk/reward ratio |
+
+---
+
 ## 🖥 Example Output
 
 ```
   [1/2] Fetching market data + news concurrently...
-  [2/2] Done in 8s — printing results...
+  [2/2] Done in 9s — printing results...
 
 ... (market data tables) ...
 
 ==========================================================================================
-  📊 INVESTMENT ANALYSIS — STOCKS
+  INVESTMENT ANALYSIS -- STOCKS
 ==========================================================================================
-  🟢 STRONG BUY        NASDAQ:NVDA                $875.40       Score:  84.2/100  [T: 78.5 M: 91.2 F: 82.0 N: 85.0]
-     → Strong across all dimensions. High conviction entry.
-       • MACD bullish crossover (12.5 > 8.2)
-       • Price above EMA20/50/200 — strong uptrend
-       • Volume 2.4x above 10d avg — strong conviction
-       • Strong daily gain +3.21%
-       • Low P/E (22.1) — reasonable valuation
-       • News sentiment positive (3 bullish vs 1 bearish in 4 relevant articles)
+  >> BUY                  XOM                        $170.99        Score:  70.8/100  [T: 73.0 M: 74.0 F: 80.0 N: 54.0]
+     -> Mostly positive signals. Favorable risk/reward.
+       * RSI overbought (76.1) — pullback risk
+       * Strong daily gain +3.36%
+       * Positive EPS (6.69) — profitable
 
-  🟩 BUY               NASDAQ:MSFT                $415.20       Score:  71.8/100  [T: 68.0 M: 74.5 F: 76.0 N: 70.0]
-     → Mostly positive signals. Favorable risk/reward.
-       ...
+  -- HOLD                 BTCUSDT                    $67,067.75     Score:  45.6/100  [T: 46.0 M: 42.0 F: N/A  N: 50.0]
+     -> Mixed signals. Wait for clearer confirmation.
+       * RSI low (42.9) — building momentum
+       * Volume only 0.5x avg — weak participation
 
-  🟡 HOLD              NYSE:JPM                   $198.50       Score:  54.3/100  [T: 52.0 M: 48.5 F: 65.0 N: 52.0]
-     → Mixed signals. Wait for clearer confirmation.
-       ...
-
-  🟢 Top Picks  : NASDAQ:NVDA, NASDAQ:MSFT, NASDAQ:AAPL
-  🔴 Avoid      : NYSE:BAC
+  [TOP PICKS] : XOM, CVX, KO, JNJ
+  [AVOID]     : AMZN
 
 ==========================================================================================
-  📊 INVESTMENT ANALYSIS — CRYPTO
+  REAL-TIME TRADING SIGNALS -- STOCKS
+  SYMBOL    ACTION    CONF    ENTRY      STOP    STOP%      T1      T1%      T2      T2%   R/R
 ==========================================================================================
-  🟢 STRONG BUY        BINANCE:BTCUSDT            $67,420.10    Score:  81.5/100  [T: 79.0 M: 88.0 F:N/A  N: 76.0]
-     → Strong across all dimensions. High conviction entry.
-       ...
+  XOM       BUY        **   $170.99  $162.60   -4.91%  $179.38   4.91%  $187.77   9.81%  2.0x
 
-  News Sentiment  → Bullish: 11  Bearish: 8  Neutral: 5
-  Market Signals  → Buy: 14  Sell: 3
+  News Sentiment -> Bullish: 9  Bearish: 7  Neutral: 61
+  Market Signals -> Buy: 3  Sell: 32
 
-[✓] JSON saved → C:\...\output.json
-[✓] CSV  saved → C:\...\stocks_20240510_143201.csv
-[✓] CSV  saved → C:\...\crypto_20240510_143201.csv
-[✓] CSV  saved → C:\...\news_20240510_143201.csv
+[OK] JSON saved -> C:\...\output.json
+[OK] CSV  saved -> C:\...\stocks_20260328_162212.csv
+[OK] CSV  saved -> C:\...\crypto_20260328_162212.csv
+[OK] CSV  saved -> C:\...\forex_20260328_162212.csv
+[OK] CSV  saved -> C:\...\commodities_20260328_162212.csv
+[OK] CSV  saved -> C:\...\indices_20260328_162212.csv
+[OK] CSV  saved -> C:\...\news_20260328_162212.csv
+
+  Done in one shot. 50 instruments + 77 news articles.
 ```
 
 ---
 
-## 📊 Data Fields Per Instrument (46 fields)
+## 📊 Data Fields Per Instrument
+
+### Stocks (46 fields)
 
 | Category | Fields |
 |----------|--------|
@@ -181,7 +203,13 @@ python scraper.py
 | Bands | `bb_upper`, `bb_lower` |
 | 52-Week | `52w_high`, `52w_low`, `price_52w_high`, `price_52w_low` |
 | Extended | `gap_%`, `pre_market_change_%`, `after_hours_change_%`, `exchange` |
-| Derived | `technical_rating`, `signal` (STRONG BUY / BUY / NEUTRAL / SELL / STRONG SELL) |
+| Derived | `technical_rating`, `signal` |
+
+### Crypto / Forex / Commodities / Indices (36 fields)
+
+Same as above minus: `market_cap`, `pe_ratio`, `eps`, `dividend_yield_%`, `sector`, `industry`, `beta`, `gap_%`, `pre_market_change_%`, `after_hours_change_%`.
+
+> These fields are not available on non-equity TradingView scanner endpoints.
 
 ---
 
@@ -202,7 +230,7 @@ python scraper.py
 
 Every run generates:
 
-- `output.json` — all data + full analysis in one structured file
+- `output.json` — all data + full analysis + signals in one structured file
 - `stocks_<timestamp>.csv`
 - `crypto_<timestamp>.csv`
 - `forex_<timestamp>.csv`
@@ -214,39 +242,43 @@ Every run generates:
 
 ```json
 {
-  "fetched_at": "2024-05-10T14:32:01Z",
-  "stocks":      [ { "symbol": "AAPL", "price": 189.3, "rsi": 48.2, "signal": "NEUTRAL", ... } ],
-  "crypto":      [ { "symbol": "BTCUSDT", "price": 67420.1, "macd": 312.5, ... } ],
-  "forex":       [ { "symbol": "EURUSD", "price": 1.0823, ... } ],
-  "commodities": [ { "symbol": "GOLD", "price": 2345.6, ... } ],
-  "indices":     [ { "symbol": "SPX", "price": 5248.3, ... } ],
-  "news":        [ { "title": "...", "sentiment": "bullish", "categories": ["macro"] } ],
+  "fetched_at": "2026-03-28T16:22:12Z",
+  "stocks":      [ { "symbol": "AAPL", "price": 248.8, "rsi": 37.9, "signal": "SELL", ... } ],
+  "crypto":      [ { "symbol": "BTCUSDT", "price": 67067.75, "macd": -509.2, ... } ],
+  "forex":       [ { "symbol": "EURUSD", "price": 1.1508, ... } ],
+  "commodities": [ { "symbol": "GOLD", "price": 4493.4, ... } ],
+  "indices":     [ { "symbol": "DJI", "price": 45166.64, ... } ],
+  "news":        [ { "title": "...", "sentiment": "bullish", "categories": ["crypto"] } ],
   "analysis": {
     "stocks": [
       {
-        "symbol": "NASDAQ:NVDA",
-        "price": 875.4,
-        "composite": 84.2,
-        "verdict": "🟢 STRONG BUY",
-        "verdict_desc": "Strong across all dimensions. High conviction entry.",
-        "scores": { "technical": 78.5, "momentum": 91.2, "fundamental": 82.0, "news": 85.0 },
+        "symbol": "XOM",
+        "price": 170.99,
+        "composite": 70.8,
+        "verdict": ">> BUY",
+        "verdict_desc": "Mostly positive signals. Favorable risk/reward.",
+        "scores": { "technical": 73.0, "momentum": 74.0, "fundamental": 80.0, "news": 54.0 },
         "reasons": {
-          "technical":   ["MACD bullish crossover", "Price above EMA20/50/200"],
-          "momentum":    ["Volume 2.4x above 10d avg", "Strong daily gain +3.21%"],
-          "fundamental": ["Low P/E (22.1)", "Positive EPS (16.40)"],
-          "news":        ["News sentiment positive (3 bullish vs 1 bearish)"]
+          "technical":   ["RSI overbought (76.1) — pullback risk", "Price above EMA20/50/200"],
+          "momentum":    ["Strong daily gain +3.36%", "Gaining from open +3.27%"],
+          "fundamental": ["Positive EPS (6.69) — profitable"],
+          "news":        ["No directly relevant news found"]
         }
       }
     ],
     "crypto": [ ... ]
   },
+  "signals": {
+    "stocks": [ { "symbol": "XOM", "action": "BUY", "entry": 170.99, "stop": 162.60, "t1": 179.38, "t2": 187.77, "rr": 2.0 } ],
+    "crypto": [ ... ]
+  },
   "summary": {
-    "total_instruments": 61,
-    "total_news": 24,
-    "bullish_news": 11,
-    "bearish_news": 8,
-    "buy_signals": 14,
-    "sell_signals": 3
+    "total_instruments": 50,
+    "total_news": 77,
+    "bullish_news": 9,
+    "bearish_news": 7,
+    "buy_signals": 3,
+    "sell_signals": 32
   }
 }
 ```
@@ -288,6 +320,7 @@ Format is always `EXCHANGE:TICKER` (e.g. `NASDAQ:AAPL`, `BINANCE:BTCUSDT`, `FX:E
 | Optimization | Detail |
 |-------------|--------|
 | Concurrent fetches | All 6 data sources run simultaneously via `asyncio.gather` |
+| Split column sets | Stocks use full 46-field payload; crypto/forex/indices use 36-field common payload — prevents 400 errors |
 | Resource blocking | Playwright blocks `image`, `media`, `font`, `stylesheet` — only HTML + JS loads |
 | Chromium flags | `--disable-gpu`, `--disable-extensions`, `--blink-settings=imagesEnabled=false` |
 | Reduced scroll waits | 3 scrolls × 800ms instead of 6 × 1500ms |
@@ -309,5 +342,6 @@ Format is always `EXCHANGE:TICKER` (e.g. `NASDAQ:AAPL`, `BINANCE:BTCUSDT`, `FX:E
 
 - TradingView's CSS class names for the news page may change. If news stops parsing, inspect the live page with DevTools and update selectors in `news.py → _parse_articles()`.
 - The scanner API requires no authentication for public market data.
+- Crypto, forex, commodities, and indices do not return fundamental fields (P/E, EPS, sector, etc.) — this is a TradingView API limitation, not a bug.
 - The analysis engine is rule-based using real market data — it is not financial advice. Always do your own research.
 - Intended for personal/educational use. Review [TradingView's Terms of Service](https://www.tradingview.com/policies/) before any commercial use.

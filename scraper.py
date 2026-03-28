@@ -12,9 +12,10 @@ from analyst import analyze_all
 from export import (
     print_stocks, print_crypto, print_forex,
     print_commodities, print_indices, print_news,
-    print_analysis,
+    print_analysis, print_signals,
     save_json, save_csv,
 )
+from signals import generate_all
 
 BANNER = r"""
  _____ _             _____                                 
@@ -59,6 +60,10 @@ async def main():
     analysis = analyze_all(stocks, crypto, news)
     print_analysis(analysis)
 
+    # ── Real-time trading signals ───────────────────────────
+    signals = generate_all(analysis, stocks, crypto)
+    print_signals(signals)
+
     # ── Summary stats ──────────────────────────────────────
     bullish = sum(1 for n in news if n.get("sentiment") == "bullish")
     bearish = sum(1 for n in news if n.get("sentiment") == "bearish")
@@ -78,6 +83,7 @@ async def main():
         "indices":      indices,
         "news":         news,
         "analysis":     analysis,
+        "signals":      signals,
         "summary": {
             "total_instruments": len(stocks) + len(crypto) + len(forex) + len(commodities) + len(indices),
             "total_news":        len(news),

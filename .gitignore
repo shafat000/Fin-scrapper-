@@ -3,3 +3,5 @@ output.json
 __pycache__/
 *.pyc
 .env
+*.csv
+_test_*.py
