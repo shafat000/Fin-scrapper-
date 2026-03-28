@@ -8,9 +8,11 @@ from scanner import (
     FOREX_SYMBOLS, COMMODITY_SYMBOLS, INDEX_SYMBOLS,
 )
 from news import scrape_news
+from analyst import analyze_all
 from export import (
     print_stocks, print_crypto, print_forex,
     print_commodities, print_indices, print_news,
+    print_analysis,
     save_json, save_csv,
 )
 
@@ -53,6 +55,10 @@ async def main():
     print_indices(indices)
     print_news(news)
 
+    # ── Analysis ───────────────────────────────────────────
+    analysis = analyze_all(stocks, crypto, news)
+    print_analysis(analysis)
+
     # ── Summary stats ──────────────────────────────────────
     bullish = sum(1 for n in news if n.get("sentiment") == "bullish")
     bearish = sum(1 for n in news if n.get("sentiment") == "bearish")
@@ -71,6 +77,7 @@ async def main():
         "commodities":  commodities,
         "indices":      indices,
         "news":         news,
+        "analysis":     analysis,
         "summary": {
             "total_instruments": len(stocks) + len(crypto) + len(forex) + len(commodities) + len(indices),
             "total_news":        len(news),

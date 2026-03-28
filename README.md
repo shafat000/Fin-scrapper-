@@ -1,6 +1,6 @@
-# 📈 TradingView Financial Scraper
+# 📈 TradingView Financial Scraper + Investment Analyst
 
-A high-performance, real-time financial data scraper built with **Playwright** and **BeautifulSoup** that pulls live **stocks**, **crypto**, **forex**, **commodities**, **indices**, and **market news** from [TradingView](https://www.tradingview.com) — all concurrently in a single run.
+A high-performance, real-time financial data scraper **and investment analysis engine** built with **Playwright** and **BeautifulSoup** that pulls live **stocks**, **crypto**, **forex**, **commodities**, **indices**, and **market news** from [TradingView](https://www.tradingview.com) — then scores every instrument across 4 dimensions to tell you exactly what to buy, hold, or avoid.
 
 ---
 
@@ -14,10 +14,12 @@ A high-performance, real-time financial data scraper built with **Playwright** a
 | Commodities | `scanner.tradingview.com/global/scan` | `httpx` async POST |
 | Indices | `scanner.tradingview.com/global/scan` | `httpx` async POST |
 | News | `tradingview.com/news/` | Playwright + BeautifulSoup |
+| Analysis | `analyst.py` | Pure Python scoring engine |
 
 - Market data is fetched from TradingView's **internal scanner API** — the same endpoint their UI uses — so prices are always real-time tick-level.
 - News requires a headless browser because the page is JavaScript-rendered. Playwright scrolls the page to load more articles, then BeautifulSoup parses the HTML.
-- All 6 fetches run **concurrently** via `asyncio.gather` — total runtime is dominated by the slowest single fetch, not the sum of all.
+- All 6 fetches run **concurrently** via `asyncio.gather`.
+- After fetching, the **analyst engine** scores every stock and crypto using all 46 data fields + news sentiment.
 
 ---
 
@@ -28,6 +30,7 @@ FIn scrapper/
 ├── scraper.py        # Orchestrator — runs everything, prints results, exports files
 ├── scanner.py        # TradingView scanner API — stocks, crypto, forex, commodities, indices
 ├── news.py           # Playwright + BeautifulSoup — news scraper with sentiment & categories
+├── analyst.py        # Investment analysis engine — scores every instrument 0–100
 ├── export.py         # Console tables, JSON export, per-category CSV export
 ├── requirements.txt  # Python dependencies
 ├── output.json       # Generated on each run (gitignored)
@@ -60,40 +63,100 @@ python scraper.py
 
 ---
 
+## 🧠 Investment Analysis Engine
+
+`analyst.py` scores every stock and crypto on a **0–100 composite score** across 4 weighted dimensions:
+
+| Dimension | Weight (Stocks) | Weight (Crypto) | What It Measures |
+|-----------|:-:|:-:|-----------------|
+| Technical | 35% | 40% | RSI, MACD, EMA alignment, VWAP, Bollinger Bands, ATR |
+| Momentum  | 25% | 35% | Daily change%, volume vs avg, relative volume, pre/after-hours, gap |
+| Fundamental | 20% | — | P/E ratio, EPS, dividend yield, market cap, beta, 52-week position |
+| News Sentiment | 20% | 25% | Relevant news matched to symbol/sector, bullish vs bearish count |
+
+### Verdict Scale
+
+| Score | Verdict | Meaning |
+|-------|---------|---------|
+| 80–100 | 🟢 STRONG BUY | Strong across all dimensions. High conviction entry. |
+| 62–80 | 🟩 BUY | Mostly positive signals. Favorable risk/reward. |
+| 42–62 | 🟡 HOLD | Mixed signals. Wait for clearer confirmation. |
+| 25–42 | 🟠 SELL | Weak technicals or fundamentals. Consider reducing. |
+| 0–25 | 🔴 STRONG SELL | Multiple red flags. High risk of further downside. |
+
+### Technical Signals Analyzed
+
+| Signal | Bullish Condition | Bearish Condition |
+|--------|-------------------|-------------------|
+| RSI | < 30 (oversold) | > 70 (overbought) |
+| MACD | MACD > Signal line | MACD < Signal line |
+| EMA Trend | Price > EMA20/50/200 | Price < all EMAs |
+| EMA Alignment | EMA20 > EMA50 > EMA200 | EMA20 < EMA50 < EMA200 |
+| VWAP | Price above VWAP | Price below VWAP |
+| Bollinger Bands | Near lower band (oversold) | Near upper band (overbought) |
+| ATR | Low volatility | ATR > 5% of price |
+
+### Momentum Signals Analyzed
+
+| Signal | Bullish | Bearish |
+|--------|---------|---------|
+| Daily change | > +3% | < -3% |
+| Volume vs 10d avg | > 2x average | < 0.5x average |
+| Relative volume | > 2x spike | — |
+| Pre-market | Gap up > 1% | Gap down > 1% |
+| After-hours | Up > 1% | Down > 1% |
+| Intraday | Gaining from open | Fading from open |
+
+### Fundamental Signals Analyzed (Stocks Only)
+
+| Signal | Bullish | Bearish |
+|--------|---------|---------|
+| P/E Ratio | < 15 (undervalued) | > 40 (expensive) |
+| EPS | Positive | Negative |
+| Dividend Yield | > 4% | — |
+| Market Cap | > $200B (mega-cap) | < $2B (small-cap risk) |
+| Beta | < 0.8 (defensive) | > 1.5 (high risk) |
+| 52-week position | > 20% above 52w low | Near 52w high |
+
+---
+
 ## 🖥 Example Output
 
 ```
   [1/2] Fetching market data + news concurrently...
   [2/2] Done in 8s — printing results...
 
-+----------------------+--------------+----------+----------------+------------------+---------+--------------+----------------------+
-  STOCKS — Real-Time
-+----------------------+--------------+----------+----------------+------------------+---------+--------------+----------------------+
- SYMBOL               | PRICE        | CHG%     | VOLUME         | MKT CAP          | RSI     | SIGNAL       | SECTOR               |
-+----------------------+--------------+----------+----------------+------------------+---------+--------------+----------------------+
- AAPL                 | 189.3        | -0.42    | 55,234,100     | 2,920,000,000,000| 48.2    | NEUTRAL      | Technology           |
- MSFT                 | 415.2        | 0.87     | 21,100,400     | 3,080,000,000,000| 61.4    | BUY          | Technology           |
- NVDA                 | 875.4        | 1.23     | 43,200,000     | 2,160,000,000,000| 72.1    | STRONG BUY   | Technology           |
- ...
+... (market data tables) ...
 
-+---------------------------+----------------+----------+--------------------+---------+------------+--------------+----------------+
-  CRYPTO — Real-Time
-+---------------------------+----------------+----------+--------------------+---------+------------+--------------+----------------+
- SYMBOL                    | PRICE          | CHG%     | VOLUME             | RSI     | MACD       | SIGNAL       | VWAP           |
-+---------------------------+----------------+----------+--------------------+---------+------------+--------------+----------------+
- BINANCE:BTCUSDT           | 67,420.1       | 2.15     | 18,900,000,000     | 64.3    | 312.5      | BUY          | 66,980.2       |
- BINANCE:ETHUSDT           | 3,521.8        | 1.87     | 9,200,000,000      | 59.7    | 45.2       | BUY          | 3,490.1        |
- ...
+==========================================================================================
+  📊 INVESTMENT ANALYSIS — STOCKS
+==========================================================================================
+  🟢 STRONG BUY        NASDAQ:NVDA                $875.40       Score:  84.2/100  [T: 78.5 M: 91.2 F: 82.0 N: 85.0]
+     → Strong across all dimensions. High conviction entry.
+       • MACD bullish crossover (12.5 > 8.2)
+       • Price above EMA20/50/200 — strong uptrend
+       • Volume 2.4x above 10d avg — strong conviction
+       • Strong daily gain +3.21%
+       • Low P/E (22.1) — reasonable valuation
+       • News sentiment positive (3 bullish vs 1 bearish in 4 relevant articles)
 
-================================================================================
-  NEWS (24 articles)
-================================================================================
-    1. ▲ [macro, forex] Fed signals rate cuts may be delayed further
-         2024-05-10T13:45:00Z | Reuters | https://www.tradingview.com/news/...
+  🟩 BUY               NASDAQ:MSFT                $415.20       Score:  71.8/100  [T: 68.0 M: 74.5 F: 76.0 N: 70.0]
+     → Mostly positive signals. Favorable risk/reward.
+       ...
 
-    2. ▲ [crypto] Bitcoin surges past $67K amid ETF inflows
-         2024-05-10T12:30:00Z | CoinDesk | https://www.tradingview.com/news/...
-  ...
+  🟡 HOLD              NYSE:JPM                   $198.50       Score:  54.3/100  [T: 52.0 M: 48.5 F: 65.0 N: 52.0]
+     → Mixed signals. Wait for clearer confirmation.
+       ...
+
+  🟢 Top Picks  : NASDAQ:NVDA, NASDAQ:MSFT, NASDAQ:AAPL
+  🔴 Avoid      : NYSE:BAC
+
+==========================================================================================
+  📊 INVESTMENT ANALYSIS — CRYPTO
+==========================================================================================
+  🟢 STRONG BUY        BINANCE:BTCUSDT            $67,420.10    Score:  81.5/100  [T: 79.0 M: 88.0 F:N/A  N: 76.0]
+     → Strong across all dimensions. High conviction entry.
+       ...
 
   News Sentiment  → Bullish: 11  Bearish: 8  Neutral: 5
   Market Signals  → Buy: 14  Sell: 3
@@ -139,7 +202,7 @@ python scraper.py
 
 Every run generates:
 
-- `output.json` — all data in one structured file
+- `output.json` — all data + full analysis in one structured file
 - `stocks_<timestamp>.csv`
 - `crypto_<timestamp>.csv`
 - `forex_<timestamp>.csv`
@@ -158,6 +221,25 @@ Every run generates:
   "commodities": [ { "symbol": "GOLD", "price": 2345.6, ... } ],
   "indices":     [ { "symbol": "SPX", "price": 5248.3, ... } ],
   "news":        [ { "title": "...", "sentiment": "bullish", "categories": ["macro"] } ],
+  "analysis": {
+    "stocks": [
+      {
+        "symbol": "NASDAQ:NVDA",
+        "price": 875.4,
+        "composite": 84.2,
+        "verdict": "🟢 STRONG BUY",
+        "verdict_desc": "Strong across all dimensions. High conviction entry.",
+        "scores": { "technical": 78.5, "momentum": 91.2, "fundamental": 82.0, "news": 85.0 },
+        "reasons": {
+          "technical":   ["MACD bullish crossover", "Price above EMA20/50/200"],
+          "momentum":    ["Volume 2.4x above 10d avg", "Strong daily gain +3.21%"],
+          "fundamental": ["Low P/E (22.1)", "Positive EPS (16.40)"],
+          "news":        ["News sentiment positive (3 bullish vs 1 bearish)"]
+        }
+      }
+    ],
+    "crypto": [ ... ]
+  },
   "summary": {
     "total_instruments": 61,
     "total_news": 24,
@@ -227,4 +309,5 @@ Format is always `EXCHANGE:TICKER` (e.g. `NASDAQ:AAPL`, `BINANCE:BTCUSDT`, `FX:E
 
 - TradingView's CSS class names for the news page may change. If news stops parsing, inspect the live page with DevTools and update selectors in `news.py → _parse_articles()`.
 - The scanner API requires no authentication for public market data.
+- The analysis engine is rule-based using real market data — it is not financial advice. Always do your own research.
 - Intended for personal/educational use. Review [TradingView's Terms of Service](https://www.tradingview.com/policies/) before any commercial use.

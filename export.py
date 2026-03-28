@@ -102,6 +102,47 @@ def print_news(news: list[dict]) -> None:
         print()
 
 
+def print_analysis(analysis: dict) -> None:
+    for category, label in (("stocks", "STOCKS"), ("crypto", "CRYPTO")):
+        items = analysis.get(category, [])
+        if not items:
+            continue
+
+        print(f"\n{'='*90}")
+        print(f"  📊 INVESTMENT ANALYSIS — {label}")
+        print(f"{'='*90}")
+
+        for a in items:
+            scores = a["scores"]
+            fund   = scores["fundamental"]
+            fund_s = f"{fund}" if fund != "N/A" else "N/A "
+            print(
+                f"  {a['verdict']:<20}  "
+                f"{a['symbol']:<25}  "
+                f"${_fmt(a['price']):<12}  "
+                f"Score: {a['composite']:>5.1f}/100  "
+                f"[T:{scores['technical']:>5.1f} M:{scores['momentum']:>5.1f} "
+                f"F:{fund_s:>5} N:{scores['news']:>5.1f}]"
+            )
+            print(f"     → {a['verdict_desc']}")
+
+            # Print top reasons (max 3 per dimension)
+            all_reasons = []
+            for dim in ("technical", "momentum", "fundamental", "news"):
+                all_reasons.extend(a["reasons"].get(dim, [])[:2])
+            for r in all_reasons[:6]:
+                print(f"       • {r}")
+            print()
+
+        # Top picks summary
+        buys  = [a["symbol"] for a in items if "BUY" in a["verdict"]][:5]
+        sells = [a["symbol"] for a in items if "SELL" in a["verdict"]][:5]
+        if buys:
+            print(f"  🟢 Top Picks  : {', '.join(buys)}")
+        if sells:
+            print(f"  🔴 Avoid      : {', '.join(sells)}")
+
+
 def save_json(output: dict, path: str = "output.json") -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
