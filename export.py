@@ -103,6 +103,55 @@ def print_news(news: list[dict]) -> None:
         print()
 
 
+def print_insights(insights: dict) -> None:
+    print(f"\n{'='*90}")
+    print(f"  AI-POWERED MARKET INSIGHTS")
+    print(f"{'='*90}")
+
+    # Market summary
+    print(f"\n  [MARKET BRIEFING]")
+    summary = insights.get("market_summary", "").encode("ascii", "replace").decode("ascii")
+    # Word-wrap at 85 chars
+    words, line = summary.split(), ""
+    for w in words:
+        if len(line) + len(w) + 1 > 85:
+            print(f"  {line}")
+            line = w
+        else:
+            line = (line + " " + w).strip()
+    if line:
+        print(f"  {line}")
+
+    print(f"\n  [MACRO REGIME] {insights.get('macro_regime', 'N/A')}")
+
+    # Market-moving news
+    movers = insights.get("market_movers", [])
+    if movers:
+        print(f"\n  [MARKET-MOVING NEWS] ({len(movers)} high-impact events detected)")
+        for m in movers:
+            title  = m.get("title", "").encode("ascii", "replace").decode("ascii")
+            events = ", ".join(m.get("events", []))
+            print(f"    ! [{events}] {title[:80]}")
+
+    # Per-instrument insights
+    for category, label in (("stocks", "STOCKS"), ("crypto", "CRYPTO")):
+        items = insights.get(category, [])
+        if not items:
+            continue
+        print(f"\n  [{label} INSIGHTS]")
+        for item in items:
+            sym       = item.get("symbol", "").split(":")[-1]
+            direction = item.get("direction", "neutral").upper()
+            tag       = {"BULLISH": "[+]", "BEARISH": "[-]", "NEUTRAL": "[=]"}.get(direction, "[=]")
+            insight   = item.get("insight", "").encode("ascii", "replace").decode("ascii")
+            chg       = item.get("change_%", 0) or 0
+            chg_str   = f"+{chg:.2f}%" if chg >= 0 else f"{chg:.2f}%"
+            print(f"    {tag} {sym:<10} {chg_str:>8}   {insight}")
+            for mv in item.get("market_movers", [])[:1]:
+                t = mv.get("title", "").encode("ascii", "replace").decode("ascii")
+                print(f"           >> {t[:75]}")
+
+
 def print_signals(signals: dict) -> None:
     for category, label in (("stocks", "STOCKS"), ("crypto", "CRYPTO")):
         items = signals.get(category, [])

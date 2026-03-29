@@ -9,13 +9,14 @@ from scanner import (
 )
 from news import scrape_news
 from analyst import analyze_all
+from signals import generate_all
+from insights import generate_all_insights
 from export import (
     print_stocks, print_crypto, print_forex,
     print_commodities, print_indices, print_news,
-    print_analysis, print_signals,
+    print_insights, print_analysis, print_signals,
     save_json, save_csv,
 )
-from signals import generate_all
 
 BANNER = r"""
  _____ _             _____                                 
@@ -25,7 +26,7 @@ BANNER = r"""
   | | | | | |  __/  /\__/ / (__| | | (_| | |_) |  __/ |   
   \_/ |_| |_|\___|  \____/ \___|_|  \__,_| .__/ \___|_|   
                                           | |              
-  TradingView Real-Time Financial Scraper |_|  v2.0        
+  TradingView Real-Time Financial Scraper |_|  v3.0        
 """
 
 
@@ -48,7 +49,7 @@ async def main():
         )
     print(f"  [2/2] Done in {(datetime.now()-t0).seconds}s - printing results...")
 
-    # ── Print ──────────────────────────────────────────────
+    # -- Market data tables ----------------------------------------------------
     print_stocks(stocks)
     print_crypto(crypto)
     print_forex(forex)
@@ -56,47 +57,52 @@ async def main():
     print_indices(indices)
     print_news(news)
 
-    # ── Analysis ───────────────────────────────────────────
+    # -- AI-Powered Insights ---------------------------------------------------
+    insights = generate_all_insights(stocks, crypto, news)
+    print_insights(insights)
+
+    # -- Investment Analysis ---------------------------------------------------
     analysis = analyze_all(stocks, crypto, news)
     print_analysis(analysis)
 
-    # ── Real-time trading signals ───────────────────────────
+    # -- Real-Time Trading Signals ---------------------------------------------
     signals = generate_all(analysis, stocks, crypto)
     print_signals(signals)
 
-    # ── Summary stats ──────────────────────────────────────
-    bullish = sum(1 for n in news if n.get("sentiment") == "bullish")
-    bearish = sum(1 for n in news if n.get("sentiment") == "bearish")
+    # -- Summary ---------------------------------------------------------------
+    bullish    = sum(1 for n in news if n.get("sentiment") == "bullish")
+    bearish    = sum(1 for n in news if n.get("sentiment") == "bearish")
+    buy_sigs   = sum(1 for s in stocks + crypto if s.get("signal") in ("BUY", "STRONG BUY"))
+    sell_sigs  = sum(1 for s in stocks + crypto if s.get("signal") in ("SELL", "STRONG SELL"))
     print(f"\n  News Sentiment -> Bullish: {bullish}  Bearish: {bearish}  Neutral: {len(news)-bullish-bearish}")
+    print(f"  Market Signals -> Buy: {buy_sigs}  Sell: {sell_sigs}")
 
-    buy_signals    = sum(1 for s in stocks + crypto if s.get("signal") in ("BUY", "STRONG BUY"))
-    sell_signals   = sum(1 for s in stocks + crypto if s.get("signal") in ("SELL", "STRONG SELL"))
-    print(f"  Market Signals -> Buy: {buy_signals}  Sell: {sell_signals}")
-
-    # ── Export ─────────────────────────────────────────────
+    # -- Export ----------------------------------------------------------------
     output = {
-        "fetched_at":   datetime.utcnow().isoformat() + "Z",
-        "stocks":       stocks,
-        "crypto":       crypto,
-        "forex":        forex,
-        "commodities":  commodities,
-        "indices":      indices,
-        "news":         news,
-        "analysis":     analysis,
-        "signals":      signals,
+        "fetched_at":  datetime.utcnow().isoformat() + "Z",
+        "stocks":      stocks,
+        "crypto":      crypto,
+        "forex":       forex,
+        "commodities": commodities,
+        "indices":     indices,
+        "news":        news,
+        "insights":    insights,
+        "analysis":    analysis,
+        "signals":     signals,
         "summary": {
             "total_instruments": len(stocks) + len(crypto) + len(forex) + len(commodities) + len(indices),
             "total_news":        len(news),
             "bullish_news":      bullish,
             "bearish_news":      bearish,
-            "buy_signals":       buy_signals,
-            "sell_signals":      sell_signals,
+            "buy_signals":       buy_sigs,
+            "sell_signals":      sell_sigs,
+            "macro_regime":      insights.get("macro_regime", "N/A"),
         },
     }
 
     save_json(output)
     save_csv(output)
-    print(f"\n  Done in one shot. {output['summary']['total_instruments']} instruments + {len(news)} news articles.\n")
+    print(f"\n  Done. {output['summary']['total_instruments']} instruments + {len(news)} articles.\n")
 
 
 if __name__ == "__main__":
