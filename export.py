@@ -230,10 +230,70 @@ def print_analysis(analysis: dict) -> None:
         if sells: print(f"  [AVOID]     : {', '.join(sells)}")
 
 
+def print_stochastic(results: list[dict]) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  STOCHASTIC MATHEMATICS ENGINE  (GBM / OU / Heston / Monte Carlo / Black-Scholes)")
+    print(W)
+    for r in results[:5]:
+        sym = r.get("symbol", "")
+        gbm = r.get("gbm", {})
+        mc  = r.get("monte_carlo", {})
+        ou  = r.get("ou", {})
+        hes = r.get("heston", {})
+        opt = r.get("options", {})
+        print(f"\n  {sym}  |  Price: {r.get('price','N/A')}  |  IV: {opt.get('iv_%','N/A')}%")
+        print(f"    GBM  21d: mean={gbm.get('mean_price','N/A')}  "
+              f"p5={gbm.get('p5_price','N/A')}  p95={gbm.get('p95_price','N/A')}  "
+              f"prob_up={gbm.get('prob_up_%','N/A')}%  VaR95={gbm.get('var_95_%','N/A')}%")
+        print(f"    MC   21d: VaR95={mc.get('var_95_%','N/A')}%  CVaR95={mc.get('cvar_95_%','N/A')}%  "
+              f"best={mc.get('best_case_%','N/A')}%  worst={mc.get('worst_case_%','N/A')}%")
+        print(f"    OU   MeanRev: z={ou.get('z_score','N/A')}  half_life={ou.get('half_life_days','N/A')}d  "
+              f"signal={ou.get('mean_rev_signal','N/A')}")
+        print(f"    Heston: IV_ATM={hes.get('iv_atm_%','N/A')}%  vol_regime={hes.get('vol_regime','N/A')}  "
+              f"feller={hes.get('feller_condition','N/A')}")
+        call = opt.get("atm_call", {})
+        put  = opt.get("atm_put", {})
+        if call and "price" in call:
+            print(f"    Options ATM: Call=${call.get('price','N/A')}  "
+                  f"d={call.get('delta','N/A')}  g={call.get('gamma','N/A')}  "
+                  f"v={call.get('vega','N/A')}  t={call.get('theta_daily','N/A')}/d  "
+                  f"Put=${put.get('price','N/A')}")
+
+
+def print_portfolio_opt(opt: dict) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  PORTFOLIO OPTIMIZATION ENGINE  (Markowitz / Risk Parity / HRP / Kelly)")
+    print(W)
+    if "error" in opt:
+        print(f"  [ERROR] {opt['error']}")
+        return
+    mkt = opt.get("markowitz", {})
+    rp  = opt.get("risk_parity", {})
+    hrp = opt.get("hrp", {})
+    kelly = opt.get("kelly_sizing", {})
+    consensus = opt.get("consensus_weights", {})
+
+    print(f"\n  [Markowitz]  E(R)={mkt.get('expected_return_%','N/A')}%  "
+          f"Vol={mkt.get('portfolio_vol_%','N/A')}%  Sharpe={mkt.get('sharpe_ratio','N/A')}")
+    print(f"  {'SYMBOL':<14} {'MARKOWITZ':>10} {'RISK PARITY':>12} {'HRP':>8} {'KELLY HALF%':>12} {'CONSENSUS':>10}")
+    for sym in opt.get("top_symbols", []):
+        k = kelly.get(sym, {})
+        print(f"  {sym:<14} "
+              f"{str(round(mkt.get('weights',{}).get(sym,0)*100,1))+'%':>10} "
+              f"{str(round(rp.get('weights',{}).get(sym,0)*100,1))+'%':>12} "
+              f"{str(round(hrp.get('weights',{}).get(sym,0)*100,1))+'%':>8} "
+              f"{str(k.get('kelly_half_%','N/A'))+'%':>12} "
+              f"{str(round(consensus.get(sym,0)*100,1))+'%':>10}")
+    print(f"\n  [HRP Clusters]: "
+          + "  ".join(f"{k}:[{','.join(v)}]" for k, v in hrp.get("clusters", {}).items()))
+
+
 def print_regime(regime: dict) -> None:
     W = "=" * 92
     print(f"\n{W}")
-    print(f"  MARKET REGIME DETECTION")
+    print(f"  MARKET REGIME DETECTION  (HMM + Bayesian Switching)")
     print(W)
     print(f"  Composite  : {regime.get('composite_regime', 'N/A')}")
     print(f"  Trend      : {regime.get('trend_regime', 'N/A')}")
@@ -242,6 +302,16 @@ def print_regime(regime: dict) -> None:
     print(f"  Macro      : {regime.get('macro_regime', 'N/A')}")
     print(f"  Liquidity  : {regime.get('liquidity_regime', 'N/A')}")
     print(f"  VIX        : {regime.get('vix', 'N/A')}   DXY: {regime.get('dxy', 'N/A')}")
+    print(f"  HMM State  : {regime.get('hmm_state', 'N/A')}")
+    probs = regime.get("hmm_state_probs", {})
+    if probs:
+        print(f"  HMM Probs  : " + "  ".join(f"{k}:{v}" for k, v in probs.items()))
+    bay = regime.get("bayesian_probs", {})
+    if bay:
+        print(f"  Bayesian   : Bull={bay.get('bull_probability','N/A')}  "
+              f"Bear={bay.get('bear_probability','N/A')}  "
+              f"HighVol={bay.get('vol_probability','N/A')}  "
+              f"Panic={bay.get('panic_probability','N/A')}")
     print(f"  Strategy   : {regime.get('recommended_strategy', '')}")
 
 

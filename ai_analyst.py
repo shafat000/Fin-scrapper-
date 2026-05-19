@@ -28,6 +28,7 @@ Architecture:
 from __future__ import annotations
 import json
 from openai import OpenAI
+from memory import get_memory_context, store_reflection, store_episode
 
 _CLIENT = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
@@ -518,11 +519,19 @@ ALL OUTPUTS: {json.dumps(context)}""",
 def run_ai_analysis(stocks: list[dict], crypto: list[dict],
                     analysis: dict, news: list[dict],
                     features: dict = None, microstructure: dict = None,
-                    regime: dict = None) -> dict:
+                    regime: dict = None, stochastic: list = None,
+                    portfolio_opt: dict = None) -> dict:
 
-    features      = features      or {}
+    features       = features       or {}
     microstructure = microstructure or {}
-    regime        = regime        or {"composite_regime": "UNKNOWN"}
+    regime         = regime         or {"composite_regime": "UNKNOWN"}
+    stochastic     = stochastic     or []
+    portfolio_opt  = portfolio_opt  or {}
+
+    # Inject memory context
+    vix        = regime.get("vix") or 0
+    bias_guess = "BULL" if regime.get("composite_regime") == "BULL-MARKET" else "BEAR"
+    mem_ctx    = get_memory_context(regime.get("composite_regime",""), vix, bias_guess)
 
     print("\n  ============================================================")
     print("  HIGHEST-LEVEL MULTI-AGENT AI PIPELINE")
@@ -534,7 +543,6 @@ def run_ai_analysis(stocks: list[dict], crypto: list[dict],
     technical     = _technical_agent(stocks, crypto, features, regime)
     sentiment     = _sentiment_agent(stocks, crypto, analysis, microstructure, regime)
     news_analysis = _news_agent(news, regime)
-
     # Layer 2 - Debate & Coordination
     print("  [Layer 2] Debate & Coordination")
     debate = _debate_agent(fundamental, technical, sentiment, news_analysis, regime)
@@ -564,7 +572,7 @@ def run_ai_analysis(stocks: list[dict], crypto: list[dict],
 
     print("  ============================================================\n")
 
-    return {
+    result = {
         "agents": {
             "fundamental": fundamental,
             "technical":   technical,
@@ -578,4 +586,21 @@ def run_ai_analysis(stocks: list[dict], crypto: list[dict],
         "execution":   execution,
         "reflection":  reflection,
         "final":       final,
+        "memory_context": mem_ctx,
     }
+
+    # Store to memory for continuous learning
+    try:
+        store_reflection({"final": final, "reflection": reflection, "regime": regime})
+        store_episode(
+            regime.get("composite_regime", ""),
+            final.get("top_opportunity", "")[:80],
+            final.get("overall_market_bias", ""),
+            vix,
+            sentiment.get("fear_greed_index", 50),
+            reflection.get("reflection_summary", "")[:200],
+        )
+    except Exception:
+        pass
+
+    return result
