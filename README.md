@@ -110,6 +110,10 @@ Fin-scrapper-/
 ├── signals.py              # ATR-based entry / stop-loss / take-profit
 ├── insights.py             # Event detection + macro regime classifier
 ├── ai_analyst.py           # Layers 7–11 — full multi-agent AI pipeline
+├── autonomous_research.py  # Advanced research, anomaly detection, validation
+├── world_model.py          # Economic digital twin + macro state model
+├── market_simulator.py     # Multi-agent market simulation + equilibrium modeling
+├── information_theory.py   # Entropy, KL divergence, mutual information
 ├── memory.py               # AI memory system (episodic/semantic/strategic)
 ├── export.py               # Console output + JSON/CSV export
 ├── requirements.txt        # Python dependencies
@@ -124,7 +128,7 @@ Fin-scrapper-/
 
 - Python 3.10+
 - Internet connection
-- NVIDIA API key (set in `ai_analyst.py`)
+- NVIDIA API key (configured in `ai_analyst.py` and `autonomous_research.py`)
 
 ---
 
@@ -132,7 +136,7 @@ Fin-scrapper-/
 
 ```bash
 pip install -r requirements.txt
-playwright install chromium
+python -m playwright install chromium
 ```
 
 ---
@@ -433,6 +437,7 @@ INDEX_SYMBOLS    = ["TVC:SPX", "TVC:VIX", "TVC:DXY"]
 ## Notes
 
 - The AI pipeline makes **9 sequential LLM calls** per run (~45–90 seconds for AI section).
+- The `scraper.py` orchestrator now integrates additional advanced modules for information theory, world modeling, market simulation, and autonomous research before final AI synthesis.
 - All stochastic math (GBM, OU, Heston, Monte Carlo, Black-Scholes) uses only Python stdlib — no numpy/scipy required.
 - The memory system grows with every run. After 10+ runs, agents start receiving meaningful historical context.
 - The HMM regime classifier uses 4 hidden states: Trending, Mean-Reverting, High-Volatility, Panic.
