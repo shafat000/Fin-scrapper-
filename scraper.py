@@ -13,6 +13,10 @@ from features import run_feature_extraction
 from regime import detect_regime
 from stochastic import run_stochastic_analysis
 from portfolio_optimizer import run_portfolio_optimization
+from information_theory import run_information_theory
+from world_model import run_world_model
+from market_simulator import run_market_simulation
+from autonomous_research import run_autonomous_research
 from analyst import analyze_all
 from signals import generate_all
 from insights import generate_all_insights
@@ -22,6 +26,8 @@ from export import (
     print_commodities, print_indices, print_news,
     print_insights, print_analysis, print_signals,
     print_regime, print_stochastic, print_portfolio_opt,
+    print_world_model, print_information_theory,
+    print_simulation, print_research,
     print_ai_analysis, save_json, save_csv,
 )
 
@@ -33,7 +39,7 @@ BANNER = r"""
   | | | | | |  __/  /\__/ / (__| | | (_| | |_) |  __/ |   
   \_/ |_| |_|\___|  \____/ \___|_|  \__,_| .__/ \___|_|   
                                           | |              
-  TradingView Real-Time Financial Scraper |_|  v5.0        
+  Autonomous Financial Intelligence Civilization  v6.0     
 """
 
 
@@ -43,7 +49,7 @@ async def main():
     print(f"  Started at: {t0.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
     # ── Layer 1: Market Data ──────────────────────────────────────────────────
-    print("  [1] Fetching market data + news concurrently...")
+    print("  [1] Fetching all market data concurrently...")
     async with httpx.AsyncClient(timeout=20) as client:
         (
             stocks, crypto, forex, commodities, indices, news
@@ -65,11 +71,11 @@ async def main():
     print_news(news)
 
     # ── Layer 2: Microstructure Engine ────────────────────────────────────────
-    print("  [2] Microstructure Engine (OFI, Microprice, Queue Model)...")
+    print("  [2] Microstructure Engine (OFI, Microprice, Queue Model, Spread)...")
     microstructure = run_microstructure(stocks, crypto, forex, commodities, indices)
 
     # ── Layer 3: Feature Extraction ───────────────────────────────────────────
-    print("  [3] Feature Extraction (GBM params, cross-asset signals)...")
+    print("  [3] Feature Extraction (cross-asset signals, feature vectors)...")
     features = run_feature_extraction(stocks, crypto, forex, commodities, indices, microstructure)
 
     # ── Layer 4: Regime Detection (HMM + Bayesian) ────────────────────────────
@@ -89,6 +95,27 @@ async def main():
     portfolio_opt = run_portfolio_optimization(stocks, crypto, analysis)
     print_portfolio_opt(portfolio_opt)
 
+    # ── Layer 7: Information Theory ───────────────────────────────────────────
+    print("  [7] Information Theory (Entropy, KL Divergence, Mutual Information)...")
+    info_theory = run_information_theory(stocks, crypto, indices)
+    print_information_theory(info_theory)
+
+    # ── Layer 8: World Model (Economic Digital Twin) ──────────────────────────
+    print("  [8] World Model (Central Bank, Geopolitics, Supply Chain, Inst Flows)...")
+    world_model = run_world_model(stocks, crypto, forex, commodities,
+                                   indices, news, microstructure)
+    print_world_model(world_model)
+
+    # ── Layer 9: Multi-Agent Market Simulation ────────────────────────────────
+    print("  [9] Market Simulation (HF + Retail + Market Maker + Central Bank)...")
+    simulation = run_market_simulation(stocks, regime, world_model, microstructure)
+    print_simulation(simulation)
+
+    # ── Layer 10: Autonomous Research Scientist ───────────────────────────────
+    print("  [10] Autonomous Research (Anomaly Detection, Hypothesis, Validation)...")
+    research = run_autonomous_research(stocks, crypto, regime, world_model, info_theory)
+    print_research(research)
+
     # ── Rule-Based Analysis ───────────────────────────────────────────────────
     insights = generate_all_insights(stocks, crypto, news)
     print_insights(insights)
@@ -96,8 +123,8 @@ async def main():
     signals = generate_all(analysis, stocks, crypto)
     print_signals(signals)
 
-    # ── Layers 7-11: Full AI Pipeline ─────────────────────────────────────────
-    print("\n  [AI] Running highest-level multi-agent system...")
+    # ── Layers 11+: Full AI Pipeline ──────────────────────────────────────────
+    print("\n  [AI] Running highest-level multi-agent civilization AI...")
     ai_analysis = run_ai_analysis(
         stocks, crypto, analysis, news,
         features=features,
@@ -105,6 +132,10 @@ async def main():
         regime=regime,
         stochastic=stochastic,
         portfolio_opt=portfolio_opt,
+        world_model=world_model,
+        info_theory=info_theory,
+        simulation=simulation,
+        research=research,
     )
     print_ai_analysis(ai_analysis)
 
@@ -113,9 +144,13 @@ async def main():
     bearish   = sum(1 for n in news if n.get("sentiment") == "bearish")
     buy_sigs  = sum(1 for s in stocks + crypto if s.get("signal") in ("BUY", "STRONG BUY"))
     sell_sigs = sum(1 for s in stocks + crypto if s.get("signal") in ("SELL", "STRONG SELL"))
-    print(f"\n  News Sentiment -> Bullish: {bullish}  Bearish: {bearish}  Neutral: {len(news)-bullish-bearish}")
-    print(f"  Market Signals -> Buy: {buy_sigs}  Sell: {sell_sigs}")
-    print(f"  Regime         -> {regime.get('composite_regime')}  |  HMM: {regime.get('hmm_state')}  |  VIX: {regime.get('vix','N/A')}")
+    print(f"\n  News Sentiment  -> Bullish: {bullish}  Bearish: {bearish}  Neutral: {len(news)-bullish-bearish}")
+    print(f"  Market Signals  -> Buy: {buy_sigs}  Sell: {sell_sigs}")
+    print(f"  Regime          -> {regime.get('composite_regime')}  |  HMM: {regime.get('hmm_state')}  |  VIX: {regime.get('vix','N/A')}")
+    print(f"  World State     -> {world_model.get('world_state')}  |  Geo Risk: {world_model.get('geopolitical',{}).get('risk_level')}")
+    print(f"  Market Sim      -> {simulation.get('market_direction')}  |  Nash: {simulation.get('market_equilibrium',{}).get('equilibrium_state')}")
+    print(f"  Info Regime     -> {info_theory.get('info_regime')}  |  KL Signal: {info_theory.get('kl_divergence',{}).get('regime_change_signal')}")
+    print(f"  Research        -> {research.get('ai_research',{}).get('research_verdict')}  |  Deployable: {research.get('deployable_count')}")
 
     # ── Export ────────────────────────────────────────────────────────────────
     output = {
@@ -131,6 +166,10 @@ async def main():
         "regime":          regime,
         "stochastic":      stochastic,
         "portfolio_opt":   portfolio_opt,
+        "information_theory": info_theory,
+        "world_model":     world_model,
+        "simulation":      simulation,
+        "research":        research,
         "insights":        insights,
         "analysis":        analysis,
         "signals":         signals,
@@ -144,9 +183,10 @@ async def main():
             "sell_signals":      sell_sigs,
             "composite_regime":  regime.get("composite_regime"),
             "hmm_state":         regime.get("hmm_state"),
-            "trend_regime":      regime.get("trend_regime"),
-            "volatility_regime": regime.get("volatility_regime"),
-            "macro_regime":      regime.get("macro_regime"),
+            "world_state":       world_model.get("world_state"),
+            "market_direction":  simulation.get("market_direction"),
+            "info_regime":       info_theory.get("info_regime"),
+            "research_verdict":  research.get("ai_research",{}).get("research_verdict"),
         },
     }
 

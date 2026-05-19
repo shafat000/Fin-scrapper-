@@ -230,6 +230,81 @@ def print_analysis(analysis: dict) -> None:
         if sells: print(f"  [AVOID]     : {', '.join(sells)}")
 
 
+def print_world_model(wm: dict) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  WORLD MODEL - ECONOMIC DIGITAL TWIN")
+    print(W)
+    print(f"  World State    : {wm.get('world_state','N/A')}")
+    cb = wm.get("central_bank",{})
+    print(f"  Central Bank   : {cb.get('policy_stance','N/A')}  | Rate Direction: {cb.get('rate_direction','N/A')}  | Dollar: {cb.get('dollar_signal','N/A')}")
+    geo = wm.get("geopolitical",{})
+    print(f"  Geopolitical   : {geo.get('risk_level','N/A')}  | Geo Risk Index: {geo.get('geo_risk_index','N/A')}  | Market Impact: {geo.get('market_impact','N/A')}")
+    sc = wm.get("supply_chain",{})
+    print(f"  Supply Chain   : {sc.get('stress_level','N/A')}  | Stress Score: {sc.get('supply_chain_stress','N/A')}  | Oil: {sc.get('oil_stress','N/A')}")
+    fl = wm.get("inst_flows",{})
+    print(f"  Inst Flows     : {fl.get('dominant_flow','N/A')}  | Inst Buy: {fl.get('institutional_buying_%','N/A')}%  | Retail Panic: {fl.get('retail_panic_%','N/A')}%")
+    lq = wm.get("liquidity",{})
+    print(f"  Liquidity      : {lq.get('liquidity_state','N/A')}  | Stress Index: {lq.get('liquidity_stress_index','N/A')}")
+    mf = wm.get("macro_factors",{})
+    print(f"  Dominant Factor: {mf.get('dominant_factor','N/A')}  | Growth: {mf.get('growth_factor','N/A')}  | Risk: {mf.get('risk_factor','N/A')}  | Dollar: {mf.get('dollar_factor','N/A')}")
+
+
+def print_information_theory(it: dict) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  INFORMATION THEORY ENGINE  (Entropy / KL Divergence / Mutual Information)")
+    print(W)
+    print(f"  Info Regime    : {it.get('info_regime','N/A')}  | Avg Entropy: {it.get('avg_market_entropy','N/A')} bits")
+    kl = it.get("kl_divergence",{})
+    print(f"  KL Divergence  : {kl.get('kl_divergence','N/A')}  | Signal: {kl.get('regime_change_signal','N/A')}  | Avg RSI: {kl.get('avg_rsi','N/A')}")
+    print(f"  Top Surprises  :")
+    for s in it.get("surprise_scores",[])[:5]:
+        print(f"    {s.get('symbol',''):<20} surprise={s.get('surprise_score','N/A'):<8} level={s.get('surprise_level','N/A')}")
+    flows = it.get("information_flow",{}).get("cross_asset_flows",[])
+    if flows:
+        print(f"  Info Flows     :")
+        for f in flows[:4]:
+            print(f"    {f.get('symbol',''):<20} driver={f.get('dominant_driver','N/A')}  MI_SPX={f.get('mi_spx','N/A')}  MI_VIX={f.get('mi_vix','N/A')}")
+
+
+def print_simulation(sim: dict) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  MULTI-AGENT MARKET SIMULATOR  (HF + Retail + Market Maker + Central Bank)")
+    print(W)
+    nash = sim.get("market_equilibrium",{})
+    print(f"  Market Direction : {sim.get('market_direction','N/A')}")
+    print(f"  Nash Equilibrium : {nash.get('equilibrium_state','N/A')}")
+    print(f"  Buy Pressure     : ${nash.get('buy_pressure_usd',0):,.0f}")
+    print(f"  Sell Pressure    : ${nash.get('sell_pressure_usd',0):,.0f}")
+    print(f"  Net Imbalance    : ${nash.get('net_imbalance_usd',0):,.0f}")
+    for r in sim.get("simulation_results",[])[:3]:
+        print(f"\n  [{r.get('symbol','')}] Predicted: {r.get('predicted_direction','N/A')}")
+        for b in r.get("emergent_behavior",[]):
+            print(f"    >> {b}")
+
+
+def print_research(res: dict) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  AUTONOMOUS RESEARCH SCIENTIST AI")
+    print(W)
+    ai = res.get("ai_research",{})
+    print(f"  Verdict        : {ai.get('research_verdict','N/A')}")
+    _wrap(ai.get("research_summary",""))
+    print(f"\n  Anomalies Detected: {len(res.get('anomalies_detected',[]))}  | Deployable Hypotheses: {res.get('deployable_count',0)}")
+    for a in res.get("anomalies_detected",[])[:4]:
+        print(f"    ! [{a.get('type','')}] {a.get('symbol','')} - {a.get('note','')}")
+    print(f"\n  Top Alpha Signals:")
+    for s in ai.get("top_alpha_signals",[])[:3]:
+        print(f"    + [{s.get('confidence','')}] {s.get('signal','')} ({s.get('symbol','')})")
+    print(f"\n  Proposed Strategies:")
+    for s in ai.get("proposed_strategies",[])[:3]:
+        print(f"    [{s.get('type','')}] {s.get('name','')} | Edge: {s.get('expected_edge_%','N/A')}% | Risk: {s.get('risk_level','')}")
+        print(f"      Entry: {s.get('entry_condition','')}")
+
+
 def print_stochastic(results: list[dict]) -> None:
     W = "=" * 92
     print(f"\n{W}")

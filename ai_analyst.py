@@ -520,13 +520,21 @@ def run_ai_analysis(stocks: list[dict], crypto: list[dict],
                     analysis: dict, news: list[dict],
                     features: dict = None, microstructure: dict = None,
                     regime: dict = None, stochastic: list = None,
-                    portfolio_opt: dict = None) -> dict:
+                    portfolio_opt: dict = None,
+                    world_model: dict = None,
+                    info_theory: dict = None,
+                    simulation: dict = None,
+                    research: dict = None) -> dict:
 
     features       = features       or {}
     microstructure = microstructure or {}
     regime         = regime         or {"composite_regime": "UNKNOWN"}
     stochastic     = stochastic     or []
     portfolio_opt  = portfolio_opt  or {}
+    world_model    = world_model    or {}
+    info_theory    = info_theory    or {}
+    simulation     = simulation     or {}
+    research       = research       or {}
 
     # Inject memory context
     vix        = regime.get("vix") or 0
@@ -569,6 +577,23 @@ def run_ai_analysis(stocks: list[dict], crypto: list[dict],
     print("  [Layer 7] Continuous Adaptation + Final CIO Decision")
     final = _final_cio(fundamental, technical, sentiment, news_analysis,
                        debate, trader, risk, portfolio, execution, reflection, regime)
+
+    # Inject civilization-level context into final decision
+    if world_model or info_theory or simulation or research:
+        civ_context = {
+            "world_state":       world_model.get("world_state"),
+            "central_bank":      world_model.get("central_bank",{}).get("policy_stance"),
+            "geo_risk":          world_model.get("geopolitical",{}).get("risk_level"),
+            "inst_flow":         world_model.get("inst_flows",{}).get("dominant_flow"),
+            "info_regime":       info_theory.get("info_regime"),
+            "kl_signal":         info_theory.get("kl_divergence",{}).get("regime_change_signal"),
+            "market_direction":  simulation.get("market_direction"),
+            "nash_equilibrium":  simulation.get("market_equilibrium",{}).get("equilibrium_state"),
+            "research_verdict":  research.get("ai_research",{}).get("research_verdict"),
+            "top_alpha":         research.get("ai_research",{}).get("top_alpha_signals",[])[:2],
+        }
+        if "civilization_context" not in final:
+            final["civilization_context"] = civ_context
 
     print("  ============================================================\n")
 
