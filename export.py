@@ -238,6 +238,161 @@ def print_analysis(analysis: dict) -> None:
             print(f"  [AVOID]     : {', '.join(sells)}")
 
 
+def _wrap(text: str, width: int = 88, indent: str = "  ") -> None:
+    if not text:
+        return
+    words, line = str(text).split(), ""
+    for w in words:
+        if len(line) + len(w) + 1 > width:
+            print(f"{indent}{line}")
+            line = w
+        else:
+            line = (line + " " + w).strip()
+    if line:
+        print(f"{indent}{line}")
+
+
+def print_ai_analysis(ai: dict) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  MULTI-AGENT AI INVESTMENT PIPELINE  (NVIDIA LLaMA 3.3-70B)")
+    print(W)
+
+    if "error" in ai:
+        print(f"  [ERROR] {ai['error']}")
+        return
+
+    agents    = ai.get("agents", {})
+    debate    = ai.get("debate", {})
+    trader    = ai.get("trader", {})
+    risk      = ai.get("risk", {})
+    portfolio = ai.get("portfolio", {})
+    final     = ai.get("final", {})
+
+    # -- Layer 1: Analyst Agents ----------------------------------------------
+    print(f"\n  {'-'*88}")
+    print(f"  LAYER 1 - ANALYST AGENTS")
+    print(f"  {'-'*88}")
+
+    fund = agents.get("fundamental", {})
+    tech = agents.get("technical", {})
+    sent = agents.get("sentiment", {})
+    news = agents.get("news", {})
+
+    print(f"  [Fundamental]  Bias: {fund.get('macro_fundamental_bias','N/A')}")
+    _wrap(fund.get("summary", ""))
+    for s in fund.get("top_fundamental_stocks", [])[:4]:
+        print(f"    + {s.get('symbol',''):<12} {s.get('verdict',''):<14} {s.get('note','')}")
+
+    print(f"\n  [Technical]    Bias: {tech.get('macro_technical_bias','N/A')}")
+    _wrap(tech.get("summary", ""))
+    for s in tech.get("bullish_setups", [])[:3]:
+        sigs = ", ".join(s.get("signals", [])[:2])
+        print(f"    + {s.get('symbol',''):<12} [{s.get('strength','')}]  {sigs}")
+    for s in tech.get("bearish_setups", [])[:2]:
+        sigs = ", ".join(s.get("signals", [])[:2])
+        print(f"    - {s.get('symbol',''):<12} [{s.get('strength','')}]  {sigs}")
+
+    print(f"\n  [Sentiment]    {sent.get('overall_sentiment','N/A')}  "
+          f"| Fear/Greed: {sent.get('fear_greed_index','?')} - {sent.get('fear_greed_label','?')}")
+    _wrap(sent.get("summary", ""))
+
+    print(f"\n  [News]         Bias: {news.get('news_macro_bias','N/A')}")
+    _wrap(news.get("summary", ""))
+    for c in news.get("macro_catalysts", [])[:3]:
+        sectors = ", ".join(c.get("affected_sectors", []))
+        print(f"    ! [{c.get('impact','')}] {c.get('event','')}  -> {sectors}")
+
+    # -- Layer 2: Bull vs Bear Debate -----------------------------------------
+    print(f"\n  {'-'*88}")
+    print(f"  LAYER 2 - BULL vs BEAR DEBATE")
+    print(f"  {'-'*88}")
+    winner = debate.get("debate_winner", "?")
+    regime = debate.get("market_regime", "?")
+    conv   = debate.get("conviction", "?")
+    print(f"  Winner: {winner:<8}  Conviction: {conv:<8}  Regime: {regime}")
+    bull = debate.get("bull_case", {})
+    bear = debate.get("bear_case", {})
+    print(f"  [BULL] {bull.get('strongest_point','')}")
+    for a in bull.get("arguments", [])[:2]:
+        print(f"    + {a}")
+    print(f"  [BEAR] {bear.get('strongest_point','')}")
+    for a in bear.get("arguments", [])[:2]:
+        print(f"    - {a}")
+    _wrap(debate.get("verdict", ""))
+
+    # -- Layer 3: Trader ------------------------------------------------------
+    print(f"\n  {'-'*88}")
+    print(f"  LAYER 3 - TRADER AGENT  (Bias: {trader.get('trader_bias','N/A')})")
+    print(f"  {'-'*88}")
+    print(f"  {'SYMBOL':<12} {'DIR':<6} {'ENTRY':<14} {'STOP':<14} {'T1':<14} {'T2':<14} {'TF':<10}")
+    for t in trader.get("trade_ideas", []):
+        print(f"  {t.get('symbol',''):<12} {t.get('direction',''):<6} "
+              f"{str(t.get('entry_zone','')):<14} {str(t.get('stop_loss','')):<14} "
+              f"{str(t.get('target1','')):<14} {str(t.get('target2','')):<14} "
+              f"{t.get('timeframe',''):<10}")
+        print(f"    > {t.get('rationale','')}")
+    print(f"  Best Trade: {trader.get('best_trade','N/A')}  "
+          f"| Avoid: {', '.join(trader.get('trades_to_avoid', []))}")
+
+    # -- Layer 4: Risk Manager ------------------------------------------------
+    print(f"\n  {'-'*88}")
+    print(f"  LAYER 4 - RISK MANAGER")
+    print(f"  {'-'*88}")
+    print(f"  Portfolio Heat: {risk.get('portfolio_heat','N/A')}  "
+          f"| Max Position Size: {risk.get('max_position_size_%','N/A')}%")
+    approved = risk.get("approved_trades", [])
+    rejected = risk.get("rejected_trades", [])
+    print(f"  Approved: {', '.join(approved) if approved else 'none'}")
+    if rejected:
+        for r in rejected:
+            print(f"  Rejected: {r.get('symbol','')} - {r.get('reason','')}")
+    for adj in risk.get("risk_adjustments", []):
+        print(f"  Adjust:   {adj.get('symbol','')} - {adj.get('adjustment','')}")
+    for tr in risk.get("tail_risks", []):
+        print(f"  Tail Risk: {tr}")
+    _wrap(risk.get("risk_verdict", ""))
+
+    # -- Layer 5: Portfolio Manager -------------------------------------------
+    print(f"\n  {'-'*88}")
+    print(f"  LAYER 5 - PORTFOLIO MANAGER  (Bias: {portfolio.get('portfolio_bias','N/A')})")
+    print(f"  {'-'*88}")
+    print(f"  Cash Reserve: {portfolio.get('cash_reserve_%','N/A')}%  "
+          f"| Rebalance Trigger: {portfolio.get('rebalance_trigger','')}")
+    print(f"  {'SYMBOL':<12} {'DIRECTION':<8} {'ALLOC%':>7}  {'PRIORITY'}")
+    for a in portfolio.get("allocations", []):
+        print(f"  {a.get('symbol',''):<12} {a.get('direction',''):<8} "
+              f"{str(a.get('allocation_%','?')):>7}%  {a.get('priority','')}")
+    _wrap(portfolio.get("portfolio_summary", ""))
+
+    # -- Layer 6: Final Decision ----------------------------------------------
+    print(f"\n  {'-'*88}")
+    print(f"  LAYER 6 - FINAL TRADE DECISION")
+    print(f"  {'-'*88}")
+    print(f"  Overall Bias: {final.get('overall_market_bias','N/A')}  "
+          f"| Regime: {final.get('market_regime','N/A')}  "
+          f"| Cash: {final.get('cash_reserve_%','N/A')}%")
+    print(f"\n  {'ACTION':<10} {'SYMBOL':<12} {'CONV':<8} {'ALLOC%':>7}  "
+          f"{'ENTRY':<14} {'STOP':<14} {'TARGET':<14} {'TF'}")
+    for t in final.get("final_trades", []):
+        print(f"  {t.get('action',''):<10} {t.get('symbol',''):<12} "
+              f"{t.get('conviction',''):<8} {str(t.get('allocation_%','?')):>7}%  "
+              f"{str(t.get('entry_zone','')):<14} {str(t.get('stop_loss','')):<14} "
+              f"{str(t.get('target','')):<14} {t.get('timeframe','')}")
+        print(f"    > {t.get('rationale','')}")
+
+    print(f"\n  [TOP OPPORTUNITY]")
+    _wrap(final.get("top_opportunity", ""), indent="    ")
+    print(f"\n  [BIGGEST RISK]")
+    _wrap(final.get("biggest_risk", ""), indent="    ")
+    dnt = final.get("do_not_touch", [])
+    if dnt:
+        print(f"\n  [DO NOT TOUCH]  {', '.join(dnt)}")
+    print(f"\n  [EXECUTIVE SUMMARY]")
+    _wrap(final.get("executive_summary", ""), indent="    ")
+    print()
+
+
 def save_json(output: dict, path: str = "output.json") -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)

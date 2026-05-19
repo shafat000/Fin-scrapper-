@@ -11,11 +11,12 @@ from news import scrape_news
 from analyst import analyze_all
 from signals import generate_all
 from insights import generate_all_insights
+from ai_analyst import run_ai_analysis
 from export import (
     print_stocks, print_crypto, print_forex,
     print_commodities, print_indices, print_news,
     print_insights, print_analysis, print_signals,
-    save_json, save_csv,
+    print_ai_analysis, save_json, save_csv,
 )
 
 BANNER = r"""
@@ -69,6 +70,11 @@ async def main():
     signals = generate_all(analysis, stocks, crypto)
     print_signals(signals)
 
+    # -- AI-Powered Deep Analysis (NVIDIA LLaMA) --------------------------------
+    print("\n  [AI] Running NVIDIA AI deep analysis...")
+    ai_analysis = run_ai_analysis(stocks, crypto, analysis, news)
+    print_ai_analysis(ai_analysis)
+
     # -- Summary ---------------------------------------------------------------
     bullish    = sum(1 for n in news if n.get("sentiment") == "bullish")
     bearish    = sum(1 for n in news if n.get("sentiment") == "bearish")
@@ -89,6 +95,7 @@ async def main():
         "insights":    insights,
         "analysis":    analysis,
         "signals":     signals,
+        "ai_analysis": ai_analysis,
         "summary": {
             "total_instruments": len(stocks) + len(crypto) + len(forex) + len(commodities) + len(indices),
             "total_news":        len(news),
