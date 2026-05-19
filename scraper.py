@@ -43,8 +43,23 @@ BANNER = r"""
 """
 
 
+def _filter_symbol(data: list[dict], symbol: str) -> list[dict]:
+    """Return only the entry whose symbol matches (case-insensitive, partial ok)."""
+    sym = symbol.upper()
+    return [d for d in data if sym in d.get("symbol", "").upper()]
+
+
 async def main():
     print(BANNER)
+
+    # ── Symbol filter prompt ──────────────────────────────────────────────────
+    raw = input("  Enter symbol to analyze (or press Enter for full scan): ").strip()
+    target = raw.upper() if raw else None
+    if target:
+        print(f"  >> Single-symbol mode: {target}\n")
+    else:
+        print("  >> Full scan mode\n")
+
     t0 = datetime.now()
     print(f"  Started at: {t0.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
@@ -62,6 +77,17 @@ async def main():
             scrape_news(max_scrolls=3),
         )
     print(f"  Done in {(datetime.now()-t0).seconds}s\n")
+
+    # ── Apply symbol filter ───────────────────────────────────────────────────
+    if target:
+        stocks      = _filter_symbol(stocks,      target) or stocks
+        crypto      = _filter_symbol(crypto,       target) or crypto
+        forex       = _filter_symbol(forex,        target) or forex
+        commodities = _filter_symbol(commodities,  target) or commodities
+        indices     = _filter_symbol(indices,       target) or indices
+        # keep at least one list non-empty so pipeline doesn't crash
+        if not any([stocks, crypto, forex, commodities, indices]):
+            print(f"  [!] Symbol '{target}' not found in any market. Running full scan.\n")
 
     print_stocks(stocks)
     print_crypto(crypto)

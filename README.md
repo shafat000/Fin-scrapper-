@@ -147,6 +147,22 @@ python -m playwright install chromium
 python scraper.py
 ```
 
+On startup you will be prompted:
+
+```
+  Enter symbol to analyze (or press Enter for full scan):
+```
+
+- **Press Enter** — runs the full scan across all configured symbols (default behaviour).
+- **Type a symbol** (e.g. `AAPL`, `BTCUSDT`, `EURUSD`, `GOLD`) — the entire 11-layer pipeline runs on that single instrument only, giving you a focused deep-dive analysis in a fraction of the time.
+
+```
+  Enter symbol to analyze (or press Enter for full scan): NVDA
+  >> Single-symbol mode: NVDA
+```
+
+The symbol match is case-insensitive and partial — typing `BTC` will match `BINANCE:BTCUSDT`.
+
 ---
 
 ## Data Sources
