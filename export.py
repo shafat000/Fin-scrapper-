@@ -13,6 +13,20 @@ def _fmt(val) -> str:
     return str(val)
 
 
+def _wrap(text: str, width: int = 88, indent: str = "  ") -> None:
+    if not text:
+        return
+    words, line = str(text).split(), ""
+    for w in words:
+        if len(line) + len(w) + 1 > width:
+            print(f"{indent}{line}")
+            line = w
+        else:
+            line = (line + " " + w).strip()
+    if line:
+        print(f"{indent}{line}")
+
+
 def print_table(title: str, rows: list[dict], fields: list[tuple]) -> None:
     sep = "+" + "+".join("-" * (w + 2) for _, _, w in fields) + "+"
     header = "|" + "|".join(f" {h:<{w}} " for _, h, w in fields) + "|"
@@ -94,8 +108,8 @@ def print_news(news: list[dict]) -> None:
     print(f"  NEWS ({len(news)} articles)")
     print("=" * 80)
     for i, n in enumerate(news, 1):
-        icon = {"bullish": "[+]", "bearish": "[-]", "neutral": "[=]"}.get(n.get("sentiment", ""), "[=]")
-        cats = ", ".join(n.get("categories", []))
+        icon  = {"bullish": "[+]", "bearish": "[-]", "neutral": "[=]"}.get(n.get("sentiment", ""), "[=]")
+        cats  = ", ".join(n.get("categories", []))
         title = n["title"].encode("ascii", "replace").decode("ascii")
         link  = n["link"].encode("ascii", "replace").decode("ascii")
         print(f"  {i:>3}. {icon} [{cats}] {title}")
@@ -107,11 +121,8 @@ def print_insights(insights: dict) -> None:
     print(f"\n{'='*90}")
     print(f"  AI-POWERED MARKET INSIGHTS")
     print(f"{'='*90}")
-
-    # Market summary
     print(f"\n  [MARKET BRIEFING]")
     summary = insights.get("market_summary", "").encode("ascii", "replace").decode("ascii")
-    # Word-wrap at 85 chars
     words, line = summary.split(), ""
     for w in words:
         if len(line) + len(w) + 1 > 85:
@@ -121,10 +132,7 @@ def print_insights(insights: dict) -> None:
             line = (line + " " + w).strip()
     if line:
         print(f"  {line}")
-
     print(f"\n  [MACRO REGIME] {insights.get('macro_regime', 'N/A')}")
-
-    # Market-moving news
     movers = insights.get("market_movers", [])
     if movers:
         print(f"\n  [MARKET-MOVING NEWS] ({len(movers)} high-impact events detected)")
@@ -132,8 +140,6 @@ def print_insights(insights: dict) -> None:
             title  = m.get("title", "").encode("ascii", "replace").decode("ascii")
             events = ", ".join(m.get("events", []))
             print(f"    ! [{events}] {title[:80]}")
-
-    # Per-instrument insights
     for category, label in (("stocks", "STOCKS"), ("crypto", "CRYPTO")):
         items = insights.get(category, [])
         if not items:
@@ -157,18 +163,15 @@ def print_signals(signals: dict) -> None:
         items = signals.get(category, [])
         if not items:
             continue
-
         print(f"\n{'='*100}")
         print(f"  REAL-TIME TRADING SIGNALS -- {label}")
         print(f"  {'SYMBOL':<22} {'ACTION':<22} {'CONF':>4}  {'ENTRY':>10} {'STOP':>10} {'STOP%':>7} {'T1':>10} {'T1%':>7} {'T2':>10} {'T2%':>7} {'R/R':>5}")
         print(f"{'='*100}")
-
         for s in items:
             action = s.get("action", "HOLD")
             stars  = "*" * s.get("confidence", 0)
             sym    = (s.get("symbol") or "")[:22]
             price  = s.get("price")
-
             if s.get("entry") is not None:
                 print(
                     f"  {sym:<22} {action:<22} {stars:>4}  "
@@ -183,21 +186,15 @@ def print_signals(signals: dict) -> None:
                 )
             else:
                 print(f"  {sym:<22} {action:<22} {stars:>4}  ${_fmt(price):>9}")
-
             for r in s.get("reasons", [])[:3]:
                 print(f"    > {r}")
             print()
-
-        # Summary
-        buy_now  = [s["symbol"] for s in items if "BUY NOW" == s.get("action")][:5]
-        sell_now = [s["symbol"] for s in items if "SELL NOW" == s.get("action")][:5]
+        buy_now  = [s["symbol"] for s in items if s.get("action") == "BUY NOW"][:5]
+        sell_now = [s["symbol"] for s in items if s.get("action") == "SELL NOW"][:5]
         buy_     = [s["symbol"] for s in items if s.get("action") == "BUY"][:5]
-        if buy_now:
-            print(f"  [BUY NOW]  : {', '.join(buy_now)}")
-        if buy_:
-            print(f"  [BUY]      : {', '.join(buy_)}")
-        if sell_now:
-            print(f"  [SELL NOW] : {', '.join(sell_now)}")
+        if buy_now:  print(f"  [BUY NOW]  : {', '.join(buy_now)}")
+        if buy_:     print(f"  [BUY]      : {', '.join(buy_)}")
+        if sell_now: print(f"  [SELL NOW] : {', '.join(sell_now)}")
 
 
 def print_analysis(analysis: dict) -> None:
@@ -205,11 +202,9 @@ def print_analysis(analysis: dict) -> None:
         items = analysis.get(category, [])
         if not items:
             continue
-
         print(f"\n{'='*90}")
         print(f"  INVESTMENT ANALYSIS -- {label}")
         print(f"{'='*90}")
-
         for a in items:
             scores = a["scores"]
             fund   = scores["fundamental"]
@@ -229,158 +224,157 @@ def print_analysis(analysis: dict) -> None:
             for r in all_reasons[:6]:
                 print(f"       * {r}")
             print()
-
         buys  = [a["symbol"] for a in items if "BUY"  in a["verdict"]][:5]
         sells = [a["symbol"] for a in items if "SELL" in a["verdict"]][:5]
-        if buys:
-            print(f"  [TOP PICKS] : {', '.join(buys)}")
-        if sells:
-            print(f"  [AVOID]     : {', '.join(sells)}")
+        if buys:  print(f"  [TOP PICKS] : {', '.join(buys)}")
+        if sells: print(f"  [AVOID]     : {', '.join(sells)}")
 
 
-def _wrap(text: str, width: int = 88, indent: str = "  ") -> None:
-    if not text:
-        return
-    words, line = str(text).split(), ""
-    for w in words:
-        if len(line) + len(w) + 1 > width:
-            print(f"{indent}{line}")
-            line = w
-        else:
-            line = (line + " " + w).strip()
-    if line:
-        print(f"{indent}{line}")
+def print_regime(regime: dict) -> None:
+    W = "=" * 92
+    print(f"\n{W}")
+    print(f"  MARKET REGIME DETECTION")
+    print(W)
+    print(f"  Composite  : {regime.get('composite_regime', 'N/A')}")
+    print(f"  Trend      : {regime.get('trend_regime', 'N/A')}")
+    print(f"  Volatility : {regime.get('volatility_regime', 'N/A')}")
+    print(f"  Momentum   : {regime.get('momentum_regime', 'N/A')}")
+    print(f"  Macro      : {regime.get('macro_regime', 'N/A')}")
+    print(f"  Liquidity  : {regime.get('liquidity_regime', 'N/A')}")
+    print(f"  VIX        : {regime.get('vix', 'N/A')}   DXY: {regime.get('dxy', 'N/A')}")
+    print(f"  Strategy   : {regime.get('recommended_strategy', '')}")
 
 
 def print_ai_analysis(ai: dict) -> None:
-    W = "=" * 92
+    W   = "=" * 92
+    SEP = f"  {'-'*88}"
     print(f"\n{W}")
-    print(f"  MULTI-AGENT AI INVESTMENT PIPELINE  (NVIDIA LLaMA 3.3-70B)")
+    print(f"  HIGHEST-LEVEL MULTI-AGENT AI INVESTMENT SYSTEM  (NVIDIA LLaMA 3.3-70B)")
     print(W)
 
     if "error" in ai:
         print(f"  [ERROR] {ai['error']}")
         return
 
-    agents    = ai.get("agents", {})
-    debate    = ai.get("debate", {})
-    trader    = ai.get("trader", {})
-    risk      = ai.get("risk", {})
-    portfolio = ai.get("portfolio", {})
-    final     = ai.get("final", {})
-
-    # -- Layer 1: Analyst Agents ----------------------------------------------
-    print(f"\n  {'-'*88}")
-    print(f"  LAYER 1 - ANALYST AGENTS")
-    print(f"  {'-'*88}")
-
+    agents     = ai.get("agents", {})
+    debate     = ai.get("debate", {})
+    trader     = ai.get("trader", {})
+    risk       = ai.get("risk", {})
+    portfolio  = ai.get("portfolio", {})
+    execution  = ai.get("execution", {})
+    reflection = ai.get("reflection", {})
+    final      = ai.get("final", {})
     fund = agents.get("fundamental", {})
     tech = agents.get("technical", {})
     sent = agents.get("sentiment", {})
     news = agents.get("news", {})
 
+    # -- Layer 1: Specialized Agents ------------------------------------------
+    print(f"\n{SEP}\n  LAYER 1 - SPECIALIZED AI AGENTS\n{SEP}")
     print(f"  [Fundamental]  Bias: {fund.get('macro_fundamental_bias','N/A')}")
     _wrap(fund.get("summary", ""))
     for s in fund.get("top_fundamental_stocks", [])[:4]:
         print(f"    + {s.get('symbol',''):<12} {s.get('verdict',''):<14} {s.get('note','')}")
-
     print(f"\n  [Technical]    Bias: {tech.get('macro_technical_bias','N/A')}")
     _wrap(tech.get("summary", ""))
     for s in tech.get("bullish_setups", [])[:3]:
-        sigs = ", ".join(s.get("signals", [])[:2])
-        print(f"    + {s.get('symbol',''):<12} [{s.get('strength','')}]  {sigs}")
+        print(f"    + {s.get('symbol',''):<12} [{s.get('strength','')}]  {', '.join(s.get('signals',[])[:2])}")
     for s in tech.get("bearish_setups", [])[:2]:
-        sigs = ", ".join(s.get("signals", [])[:2])
-        print(f"    - {s.get('symbol',''):<12} [{s.get('strength','')}]  {sigs}")
-
+        print(f"    - {s.get('symbol',''):<12} [{s.get('strength','')}]  {', '.join(s.get('signals',[])[:2])}")
     print(f"\n  [Sentiment]    {sent.get('overall_sentiment','N/A')}  "
           f"| Fear/Greed: {sent.get('fear_greed_index','?')} - {sent.get('fear_greed_label','?')}")
     _wrap(sent.get("summary", ""))
-
     print(f"\n  [News]         Bias: {news.get('news_macro_bias','N/A')}")
     _wrap(news.get("summary", ""))
     for c in news.get("macro_catalysts", [])[:3]:
-        sectors = ", ".join(c.get("affected_sectors", []))
-        print(f"    ! [{c.get('impact','')}] {c.get('event','')}  -> {sectors}")
+        print(f"    ! [{c.get('impact','')}] {c.get('event','')}  -> {', '.join(c.get('affected_sectors',[]))}")
 
-    # -- Layer 2: Bull vs Bear Debate -----------------------------------------
-    print(f"\n  {'-'*88}")
-    print(f"  LAYER 2 - BULL vs BEAR DEBATE")
-    print(f"  {'-'*88}")
-    winner = debate.get("debate_winner", "?")
-    regime = debate.get("market_regime", "?")
-    conv   = debate.get("conviction", "?")
-    print(f"  Winner: {winner:<8}  Conviction: {conv:<8}  Regime: {regime}")
+    # -- Layer 2: Debate & Coordination ---------------------------------------
+    print(f"\n{SEP}\n  LAYER 2 - DEBATE & COORDINATION\n{SEP}")
+    print(f"  Winner: {debate.get('debate_winner','?'):<8}  "
+          f"Conviction: {debate.get('conviction','?'):<8}  "
+          f"Regime Alignment: {debate.get('regime_alignment','?')}")
     bull = debate.get("bull_case", {})
     bear = debate.get("bear_case", {})
     print(f"  [BULL] {bull.get('strongest_point','')}")
-    for a in bull.get("arguments", [])[:2]:
-        print(f"    + {a}")
+    for a in bull.get("arguments", [])[:2]: print(f"    + {a}")
     print(f"  [BEAR] {bear.get('strongest_point','')}")
-    for a in bear.get("arguments", [])[:2]:
-        print(f"    - {a}")
+    for a in bear.get("arguments", [])[:2]: print(f"    - {a}")
     _wrap(debate.get("verdict", ""))
 
-    # -- Layer 3: Trader ------------------------------------------------------
-    print(f"\n  {'-'*88}")
-    print(f"  LAYER 3 - TRADER AGENT  (Bias: {trader.get('trader_bias','N/A')})")
-    print(f"  {'-'*88}")
-    print(f"  {'SYMBOL':<12} {'DIR':<6} {'ENTRY':<14} {'STOP':<14} {'T1':<14} {'T2':<14} {'TF':<10}")
+    # -- Layer 3: Risk Optimization -------------------------------------------
+    print(f"\n{SEP}\n  LAYER 3 - RISK OPTIMIZATION  (Trader: {trader.get('trader_bias','N/A')})\n{SEP}")
+    print(f"  {'SYMBOL':<12} {'DIR':<6} {'ENTRY':<14} {'STOP':<14} {'T1':<14} {'T2':<14} {'FIT':<8} {'TF'}")
     for t in trader.get("trade_ideas", []):
         print(f"  {t.get('symbol',''):<12} {t.get('direction',''):<6} "
               f"{str(t.get('entry_zone','')):<14} {str(t.get('stop_loss','')):<14} "
               f"{str(t.get('target1','')):<14} {str(t.get('target2','')):<14} "
-              f"{t.get('timeframe',''):<10}")
+              f"{t.get('regime_fit',''):<8} {t.get('timeframe','')}")
         print(f"    > {t.get('rationale','')}")
-    print(f"  Best Trade: {trader.get('best_trade','N/A')}  "
-          f"| Avoid: {', '.join(trader.get('trades_to_avoid', []))}")
-
-    # -- Layer 4: Risk Manager ------------------------------------------------
-    print(f"\n  {'-'*88}")
-    print(f"  LAYER 4 - RISK MANAGER")
-    print(f"  {'-'*88}")
-    print(f"  Portfolio Heat: {risk.get('portfolio_heat','N/A')}  "
-          f"| Max Position Size: {risk.get('max_position_size_%','N/A')}%")
+    print(f"  Best: {trader.get('best_trade','N/A')}  | Avoid: {', '.join(trader.get('trades_to_avoid',[]))}")
+    print(f"\n  Risk: Heat={risk.get('portfolio_heat','N/A')}  "
+          f"MaxSize={risk.get('max_position_size_%','N/A')}%  "
+          f"Kelly={risk.get('kelly_fraction','N/A')}")
     approved = risk.get("approved_trades", [])
-    rejected = risk.get("rejected_trades", [])
     print(f"  Approved: {', '.join(approved) if approved else 'none'}")
-    if rejected:
-        for r in rejected:
-            print(f"  Rejected: {r.get('symbol','')} - {r.get('reason','')}")
-    for adj in risk.get("risk_adjustments", []):
-        print(f"  Adjust:   {adj.get('symbol','')} - {adj.get('adjustment','')}")
+    for r in risk.get("rejected_trades", []):
+        print(f"  Rejected: {r.get('symbol','')} - {r.get('reason','')}")
     for tr in risk.get("tail_risks", []):
         print(f"  Tail Risk: {tr}")
     _wrap(risk.get("risk_verdict", ""))
 
-    # -- Layer 5: Portfolio Manager -------------------------------------------
-    print(f"\n  {'-'*88}")
-    print(f"  LAYER 5 - PORTFOLIO MANAGER  (Bias: {portfolio.get('portfolio_bias','N/A')})")
-    print(f"  {'-'*88}")
-    print(f"  Cash Reserve: {portfolio.get('cash_reserve_%','N/A')}%  "
-          f"| Rebalance Trigger: {portfolio.get('rebalance_trigger','')}")
-    print(f"  {'SYMBOL':<12} {'DIRECTION':<8} {'ALLOC%':>7}  {'PRIORITY'}")
+    # -- Layer 4: Portfolio Optimization --------------------------------------
+    print(f"\n{SEP}\n  LAYER 4 - PORTFOLIO OPTIMIZATION  (Bias: {portfolio.get('portfolio_bias','N/A')})\n{SEP}")
+    print(f"  Cash: {portfolio.get('cash_reserve_%','N/A')}%  | Rebalance: {portfolio.get('rebalance_trigger','')}")
+    sw = portfolio.get("sector_weights", {})
+    if sw:
+        print(f"  Sector Weights: " + "  ".join(f"{k}:{v}%" for k, v in sw.items()))
+    print(f"  {'SYMBOL':<12} {'DIR':<8} {'ALLOC%':>7}  {'KELLY%':>7}  {'PRIORITY'}")
     for a in portfolio.get("allocations", []):
         print(f"  {a.get('symbol',''):<12} {a.get('direction',''):<8} "
-              f"{str(a.get('allocation_%','?')):>7}%  {a.get('priority','')}")
+              f"{str(a.get('allocation_%','?')):>7}%  "
+              f"{str(a.get('kelly_adjusted_%','?')):>7}%  "
+              f"{a.get('priority','')}")
     _wrap(portfolio.get("portfolio_summary", ""))
 
-    # -- Layer 6: Final Decision ----------------------------------------------
-    print(f"\n  {'-'*88}")
-    print(f"  LAYER 6 - FINAL TRADE DECISION")
-    print(f"  {'-'*88}")
-    print(f"  Overall Bias: {final.get('overall_market_bias','N/A')}  "
-          f"| Regime: {final.get('market_regime','N/A')}  "
-          f"| Cash: {final.get('cash_reserve_%','N/A')}%")
+    # -- Layer 5: Execution Optimization --------------------------------------
+    print(f"\n{SEP}\n  LAYER 5 - EXECUTION OPTIMIZATION\n{SEP}")
+    _wrap(execution.get("overall_execution_strategy", ""))
+    print(f"  {'SYMBOL':<12} {'ORDER':<10} {'TIMING':<22} {'URGENCY':<8} {'SLIPPAGE'}")
+    for e in execution.get("execution_plan", []):
+        print(f"  {e.get('symbol',''):<12} {e.get('order_type',''):<10} "
+              f"{e.get('entry_timing',''):<22} {e.get('urgency',''):<8} "
+              f"{e.get('slippage_risk','')}")
+        print(f"    > {e.get('execution_note','')}")
+
+    # -- Layer 6: Learning & Reflection ---------------------------------------
+    print(f"\n{SEP}\n  LAYER 6 - LEARNING & REFLECTION\n{SEP}")
+    print(f"  Pipeline Consistency: {reflection.get('pipeline_consistency','N/A')}  "
+          f"| Confidence: {reflection.get('confidence_in_thesis','N/A')}")
+    for d in reflection.get("agent_disagreements", []):
+        print(f"  [Disagreement] {d}")
+    for b in reflection.get("blind_spots", []):
+        print(f"  [Blind Spot]   {b}")
+    for s in reflection.get("scenario_risks", [])[:3]:
+        print(f"  [Scenario] {s.get('scenario','')} -> Impact: {s.get('impact','')} | Hedge: {s.get('hedge','')}")
+    signals_watch = reflection.get("adaptation_signals", [])
+    if signals_watch:
+        print(f"  [Watch For]: {', '.join(signals_watch[:3])}")
+    _wrap(reflection.get("reflection_summary", ""))
+
+    # -- Layer 7: Final CIO Decision + Continuous Adaptation ------------------
+    print(f"\n{SEP}\n  LAYER 7 - FINAL CIO DECISION + CONTINUOUS ADAPTATION\n{SEP}")
+    print(f"  Overall Bias: {final.get('overall_market_bias','N/A')}  | Cash: {final.get('cash_reserve_%','N/A')}%")
+    _wrap(final.get("regime_summary", ""))
     print(f"\n  {'ACTION':<10} {'SYMBOL':<12} {'CONV':<8} {'ALLOC%':>7}  "
-          f"{'ENTRY':<14} {'STOP':<14} {'TARGET':<14} {'TF'}")
+          f"{'ENTRY':<14} {'STOP':<12} {'TARGET':<12} {'ORDER':<8} {'TF'}")
     for t in final.get("final_trades", []):
         print(f"  {t.get('action',''):<10} {t.get('symbol',''):<12} "
               f"{t.get('conviction',''):<8} {str(t.get('allocation_%','?')):>7}%  "
-              f"{str(t.get('entry_zone','')):<14} {str(t.get('stop_loss','')):<14} "
-              f"{str(t.get('target','')):<14} {t.get('timeframe','')}")
+              f"{str(t.get('entry_zone','')):<14} {str(t.get('stop_loss','')):<12} "
+              f"{str(t.get('target','')):<12} {t.get('order_type',''):<8} "
+              f"{t.get('timeframe','')}")
         print(f"    > {t.get('rationale','')}")
-
     print(f"\n  [TOP OPPORTUNITY]")
     _wrap(final.get("top_opportunity", ""), indent="    ")
     print(f"\n  [BIGGEST RISK]")
@@ -388,6 +382,8 @@ def print_ai_analysis(ai: dict) -> None:
     dnt = final.get("do_not_touch", [])
     if dnt:
         print(f"\n  [DO NOT TOUCH]  {', '.join(dnt)}")
+    print(f"\n  [ADAPTATION PLAN]")
+    _wrap(final.get("adaptation_plan", ""), indent="    ")
     print(f"\n  [EXECUTIVE SUMMARY]")
     _wrap(final.get("executive_summary", ""), indent="    ")
     print()
@@ -411,7 +407,6 @@ def save_csv(output: dict, folder: str = ".") -> None:
             writer.writeheader()
             writer.writerows(rows)
         print(f"[OK] CSV  saved -> {os.path.abspath(path)}")
-
     news = output.get("news", [])
     if news:
         path = os.path.join(folder, f"news_{ts}.csv")

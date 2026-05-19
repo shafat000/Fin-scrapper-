@@ -8,6 +8,9 @@ from scanner import (
     FOREX_SYMBOLS, COMMODITY_SYMBOLS, INDEX_SYMBOLS,
 )
 from news import scrape_news
+from microstructure import run_microstructure
+from features import run_feature_extraction
+from regime import detect_regime
 from analyst import analyze_all
 from signals import generate_all
 from insights import generate_all_insights
@@ -16,7 +19,8 @@ from export import (
     print_stocks, print_crypto, print_forex,
     print_commodities, print_indices, print_news,
     print_insights, print_analysis, print_signals,
-    print_ai_analysis, save_json, save_csv,
+    print_regime, print_ai_analysis,
+    save_json, save_csv,
 )
 
 BANNER = r"""
@@ -27,7 +31,7 @@ BANNER = r"""
   | | | | | |  __/  /\__/ / (__| | | (_| | |_) |  __/ |   
   \_/ |_| |_|\___|  \____/ \___|_|  \__,_| .__/ \___|_|   
                                           | |              
-  TradingView Real-Time Financial Scraper |_|  v3.0        
+  TradingView Real-Time Financial Scraper |_|  v4.0        
 """
 
 
@@ -36,7 +40,8 @@ async def main():
     t0 = datetime.now()
     print(f"  Started at: {t0.strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-    print("  [1/2] Fetching market data + news concurrently...")
+    # ── Layer 1: Market Data ──────────────────────────────────────────────────
+    print("  [Market Data] Fetching all sources concurrently...")
     async with httpx.AsyncClient(timeout=20) as client:
         (
             stocks, crypto, forex, commodities, indices, news
@@ -48,9 +53,9 @@ async def main():
             fetch("global",  INDEX_SYMBOLS,     client),
             scrape_news(max_scrolls=3),
         )
-    print(f"  [2/2] Done in {(datetime.now()-t0).seconds}s - printing results...")
+    print(f"  Done in {(datetime.now()-t0).seconds}s\n")
 
-    # -- Market data tables ----------------------------------------------------
+    # Print market data tables
     print_stocks(stocks)
     print_crypto(crypto)
     print_forex(forex)
@@ -58,58 +63,82 @@ async def main():
     print_indices(indices)
     print_news(news)
 
-    # -- AI-Powered Insights ---------------------------------------------------
+    # ── Layer 2: Microstructure Engine ────────────────────────────────────────
+    print("  [Microstructure] Analyzing market structure...")
+    microstructure = run_microstructure(stocks, crypto, forex, commodities, indices)
+
+    # ── Layer 3: Feature Extraction ───────────────────────────────────────────
+    print("  [Features] Extracting feature vectors...")
+    features = run_feature_extraction(stocks, crypto, forex, commodities, indices, microstructure)
+
+    # ── Layer 4: Regime Detection ─────────────────────────────────────────────
+    print("  [Regime] Detecting market regime...")
+    regime = detect_regime(features, microstructure, features["cross_asset"], news)
+    print_regime(regime)
+
+    # ── Rule-Based Analysis (feeds into AI agents) ────────────────────────────
     insights = generate_all_insights(stocks, crypto, news)
     print_insights(insights)
 
-    # -- Investment Analysis ---------------------------------------------------
     analysis = analyze_all(stocks, crypto, news)
     print_analysis(analysis)
 
-    # -- Real-Time Trading Signals ---------------------------------------------
     signals = generate_all(analysis, stocks, crypto)
     print_signals(signals)
 
-    # -- AI-Powered Deep Analysis (NVIDIA LLaMA) --------------------------------
-    print("\n  [AI] Running NVIDIA AI deep analysis...")
-    ai_analysis = run_ai_analysis(stocks, crypto, analysis, news)
+    # ── Layers 5-11: Full AI Pipeline ─────────────────────────────────────────
+    print("\n  [AI Pipeline] Running highest-level multi-agent system...")
+    ai_analysis = run_ai_analysis(
+        stocks, crypto, analysis, news,
+        features=features,
+        microstructure=microstructure,
+        regime=regime,
+    )
     print_ai_analysis(ai_analysis)
 
-    # -- Summary ---------------------------------------------------------------
-    bullish    = sum(1 for n in news if n.get("sentiment") == "bullish")
-    bearish    = sum(1 for n in news if n.get("sentiment") == "bearish")
-    buy_sigs   = sum(1 for s in stocks + crypto if s.get("signal") in ("BUY", "STRONG BUY"))
-    sell_sigs  = sum(1 for s in stocks + crypto if s.get("signal") in ("SELL", "STRONG SELL"))
+    # ── Summary ───────────────────────────────────────────────────────────────
+    bullish   = sum(1 for n in news if n.get("sentiment") == "bullish")
+    bearish   = sum(1 for n in news if n.get("sentiment") == "bearish")
+    buy_sigs  = sum(1 for s in stocks + crypto if s.get("signal") in ("BUY", "STRONG BUY"))
+    sell_sigs = sum(1 for s in stocks + crypto if s.get("signal") in ("SELL", "STRONG SELL"))
     print(f"\n  News Sentiment -> Bullish: {bullish}  Bearish: {bearish}  Neutral: {len(news)-bullish-bearish}")
     print(f"  Market Signals -> Buy: {buy_sigs}  Sell: {sell_sigs}")
+    print(f"  Regime         -> {regime.get('composite_regime')}  |  {regime.get('trend_regime')}  |  VIX: {regime.get('vix','N/A')}")
 
-    # -- Export ----------------------------------------------------------------
+    # ── Export ────────────────────────────────────────────────────────────────
     output = {
-        "fetched_at":  datetime.utcnow().isoformat() + "Z",
-        "stocks":      stocks,
-        "crypto":      crypto,
-        "forex":       forex,
-        "commodities": commodities,
-        "indices":     indices,
-        "news":        news,
-        "insights":    insights,
-        "analysis":    analysis,
-        "signals":     signals,
-        "ai_analysis": ai_analysis,
+        "fetched_at":      datetime.utcnow().isoformat() + "Z",
+        "stocks":          stocks,
+        "crypto":          crypto,
+        "forex":           forex,
+        "commodities":     commodities,
+        "indices":         indices,
+        "news":            news,
+        "microstructure":  microstructure,
+        "features":        features,
+        "regime":          regime,
+        "insights":        insights,
+        "analysis":        analysis,
+        "signals":         signals,
+        "ai_analysis":     ai_analysis,
         "summary": {
-            "total_instruments": len(stocks) + len(crypto) + len(forex) + len(commodities) + len(indices),
+            "total_instruments": len(stocks)+len(crypto)+len(forex)+len(commodities)+len(indices),
             "total_news":        len(news),
             "bullish_news":      bullish,
             "bearish_news":      bearish,
             "buy_signals":       buy_sigs,
             "sell_signals":      sell_sigs,
-            "macro_regime":      insights.get("macro_regime", "N/A"),
+            "composite_regime":  regime.get("composite_regime"),
+            "trend_regime":      regime.get("trend_regime"),
+            "volatility_regime": regime.get("volatility_regime"),
+            "macro_regime":      regime.get("macro_regime"),
         },
     }
 
     save_json(output)
     save_csv(output)
-    print(f"\n  Done. {output['summary']['total_instruments']} instruments + {len(news)} articles.\n")
+    elapsed = (datetime.now() - t0).seconds
+    print(f"\n  Done in {elapsed}s. {output['summary']['total_instruments']} instruments + {len(news)} articles.\n")
 
 
 if __name__ == "__main__":
