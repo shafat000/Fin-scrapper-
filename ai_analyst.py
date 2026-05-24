@@ -27,39 +27,8 @@ Architecture:
 """
 from __future__ import annotations
 import json
-from openai import OpenAI
+from ai_client import call_ai
 from memory import get_memory_context, store_reflection, store_episode
-
-_CLIENT = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key="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",
-)
-MODEL = "meta/llama-3.3-70b-instruct"
-
-
-# ── Core LLM call ─────────────────────────────────────────────────────────────
-
-def _call(system: str, user: str, max_tokens: int = 1200) -> dict:
-    try:
-        resp = _CLIENT.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user",   "content": user},
-            ],
-            temperature=0.2,
-            max_tokens=max_tokens,
-        )
-        raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw.strip())
-    except json.JSONDecodeError:
-        return {"error": "JSON parse failed", "raw": raw}
-    except Exception as e:
-        return {"error": str(e)}
 
 
 # ── Data slimmers ─────────────────────────────────────────────────────────────
@@ -99,7 +68,7 @@ def _slim_features(features: dict, n=8) -> dict:
 def _fundamental_agent(stocks, crypto, regime) -> dict:
     print("    [1/4] Fundamental Agent...")
     data = {"stocks": _slim_stocks(stocks), "regime": regime.get("composite_regime")}
-    return _call(
+    return call_ai(
         "You are a Fundamental Analyst. Evaluate P/E, EPS, market cap, beta, dividends, sector. "
         "Respond ONLY with valid JSON, no markdown.",
         f"""Return JSON:
@@ -119,7 +88,7 @@ def _technical_agent(stocks, crypto, features, regime) -> dict:
         "features": _slim_features(features),
         "regime": {"trend": regime.get("trend_regime"), "volatility": regime.get("volatility_regime")},
     }
-    return _call(
+    return call_ai(
         "You are a Technical Analyst. Evaluate RSI, MACD, EMA alignment, VWAP, Bollinger Bands, ATR. "
         "Respond ONLY with valid JSON, no markdown.",
         f"""Return JSON:
@@ -145,7 +114,7 @@ def _sentiment_agent(stocks, crypto, analysis, microstructure, regime) -> dict:
         "regime": regime.get("composite_regime"),
         "cross_asset_bias": regime.get("cross_asset_bias"),
     }
-    return _call(
+    return call_ai(
         "You are a Market Sentiment Analyst. Evaluate momentum, volume, order flow, composite scores. "
         "Respond ONLY with valid JSON, no markdown.",
         f"""Return JSON:
@@ -164,7 +133,7 @@ def _news_agent(news, regime) -> dict:
     print("    [4/4] News Agent...")
     headlines = [{"title": n["title"], "sentiment": n["sentiment"],
                   "categories": n.get("categories",[])} for n in news[:40]]
-    return _call(
+    return call_ai(
         "You are a Financial News Analyst. Identify market-moving themes, macro catalysts, risks. "
         "Respond ONLY with valid JSON, no markdown.",
         f"""Return JSON:
@@ -207,7 +176,7 @@ def _debate_agent(fundamental, technical, sentiment, news_analysis, regime) -> d
         "macro_catalysts":   news_analysis.get("macro_catalysts",[])[:3],
         "key_risks":         news_analysis.get("key_risks_from_news",[]),
     }
-    return _call(
+    return call_ai(
         "You are a debate moderator. Given all analyst inputs AND the detected market regime, "
         "construct the strongest bull and bear cases, then determine the winner. "
         "Respond ONLY with valid JSON, no markdown.",
@@ -251,7 +220,7 @@ def _trader_agent(debate, technical, sentiment, stocks, crypto, regime) -> dict:
         "momentum_leaders": sentiment.get("momentum_leaders",[])[:3],
         "prices":           {s["symbol"]: s.get("price") for s in stocks[:12] if s.get("symbol")},
     }
-    return _call(
+    return call_ai(
         "You are a disciplined Trader. Generate specific trade setups aligned with the regime. "
         "Respond ONLY with valid JSON, no markdown.",
         f"""Generate trade setups and return JSON:
@@ -290,7 +259,7 @@ def _risk_manager(trader, debate, news_analysis, regime, microstructure) -> dict
         "key_risks":         news_analysis.get("key_risks_from_news",[]),
         "vix":               regime.get("vix"),
     }
-    return _call(
+    return call_ai(
         "You are a Risk Manager. Stress-test trades, set position sizing, identify tail risks. "
         "Be conservative. Respond ONLY with valid JSON, no markdown.",
         f"""Return risk assessment JSON:
@@ -330,7 +299,7 @@ def _portfolio_manager(trader, risk, debate, fundamental, sentiment, regime) -> 
         "fear_greed":          sentiment.get("fear_greed_label"),
         "top_fundamental":     fundamental.get("top_fundamental_stocks",[])[:3],
     }
-    return _call(
+    return call_ai(
         "You are a Portfolio Manager. Build an optimal allocation using Kelly criterion, "
         "regime-aware sizing, and diversification. Respond ONLY with valid JSON, no markdown.",
         f"""Build portfolio and return JSON:
@@ -379,7 +348,7 @@ def _execution_agent(portfolio, trader, microstructure, regime) -> dict:
         "volatility":       regime.get("volatility_regime"),
         "liquidity_regime": regime.get("liquidity_regime"),
     }
-    return _call(
+    return call_ai(
         "You are an Execution Strategist. Optimize entry timing, order types, and slippage "
         "based on microstructure and regime. Respond ONLY with valid JSON, no markdown.",
         f"""Return execution plan JSON:
@@ -425,7 +394,7 @@ def _reflection_agent(fundamental, technical, sentiment, news_analysis,
         "best_trade":        trader.get("best_trade"),
         "execution_strategy": execution.get("overall_execution_strategy"),
     }
-    return _call(
+    return call_ai(
         "You are a Reflective Analyst. Review the entire pipeline output, identify "
         "inconsistencies, blind spots, and what could go wrong. Provide learning insights "
         "for continuous adaptation. Respond ONLY with valid JSON, no markdown.",
@@ -484,7 +453,7 @@ def _final_cio(fundamental, technical, sentiment, news_analysis,
         "adaptation_signals": reflection.get("adaptation_signals",[]),
         "confidence":        reflection.get("confidence_in_thesis"),
     }
-    return _call(
+    return call_ai(
         "You are the Chief Investment Officer. Synthesize ALL agent outputs into the final "
         "definitive decision. Account for regime, execution, and reflection insights. "
         "Be specific, actionable, and decisive. Respond ONLY with valid JSON, no markdown.",
@@ -617,6 +586,17 @@ def run_ai_analysis(stocks: list[dict], crypto: list[dict],
     # Store to memory for continuous learning
     try:
         store_reflection({"final": final, "reflection": reflection, "regime": regime})
+        
+        # Extract price for top trade if possible
+        top_trade_sym = final.get("top_opportunity", "")[:10].split()[0] if final.get("top_opportunity") else ""
+        top_price = None
+        for t in final.get("final_trades", []):
+            if t.get("symbol") == top_trade_sym:
+                try:
+                    top_price = float(str(t.get("entry_zone")).replace("$","").replace(",",""))
+                except: pass
+                break
+
         store_episode(
             regime.get("composite_regime", ""),
             final.get("top_opportunity", "")[:80],
@@ -624,6 +604,7 @@ def run_ai_analysis(stocks: list[dict], crypto: list[dict],
             vix,
             sentiment.get("fear_greed_index", 50),
             reflection.get("reflection_summary", "")[:200],
+            price=top_price
         )
     except Exception:
         pass

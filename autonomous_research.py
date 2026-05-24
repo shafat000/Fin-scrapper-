@@ -14,32 +14,7 @@ The AI autonomously:
 from __future__ import annotations
 import math
 import json
-from openai import OpenAI
-
-_CLIENT = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key="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",
-)
-MODEL = "meta/llama-3.3-70b-instruct"
-
-
-def _call(system: str, user: str, max_tokens: int = 1000) -> dict:
-    try:
-        resp = _CLIENT.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "system", "content": system},
-                      {"role": "user",   "content": user}],
-            temperature=0.3,
-            max_tokens=max_tokens,
-        )
-        raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw.strip())
-    except Exception as e:
-        return {"error": str(e)}
+from ai_client import call_ai
 
 
 # ── Statistical Anomaly Detection ────────────────────────────────────────────
@@ -193,7 +168,7 @@ def _ai_research_agent(anomalies: list[dict], hypotheses: list[dict],
         "world_state":       world_model.get("world_state"),
         "dominant_factor":   world_model.get("macro_factors",{}).get("dominant_factor"),
     }
-    return _call(
+    return call_ai(
         "You are an Autonomous Research Scientist AI for quantitative finance. "
         "Analyze detected anomalies, validated hypotheses, and market conditions. "
         "Propose specific deployable trading strategies. Respond ONLY with valid JSON.",

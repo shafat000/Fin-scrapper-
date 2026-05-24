@@ -21,6 +21,8 @@ from analyst import analyze_all
 from signals import generate_all
 from insights import generate_all_insights
 from ai_analyst import run_ai_analysis
+from backtest import run_backtest, print_backtest_results
+from validation import validate_signals, print_validation_results
 from export import (
     print_stocks, print_crypto, print_forex,
     print_commodities, print_indices, print_news,
@@ -96,6 +98,10 @@ async def main():
     print_indices(indices)
     print_news(news)
 
+    # ── Performance Backtest ──────────────────────────────────────────────────
+    backtest_results = run_backtest({"stocks": stocks, "crypto": crypto})
+    print_backtest_results(backtest_results)
+
     # ── Layer 2: Microstructure Engine ────────────────────────────────────────
     print("  [2] Microstructure Engine (OFI, Microprice, Queue Model, Spread)...")
     microstructure = run_microstructure(stocks, crypto, forex, commodities, indices)
@@ -148,6 +154,11 @@ async def main():
     print_analysis(analysis)
     signals = generate_all(analysis, stocks, crypto)
     print_signals(signals)
+
+    # ── Signal Confluence Validation ──────────────────────────────────────────
+    validated_stocks = validate_signals(stocks, microstructure["stocks"])
+    validated_crypto = validate_signals(crypto, microstructure["crypto"])
+    print_validation_results(validated_stocks + validated_crypto)
 
     # ── Layers 11+: Full AI Pipeline ──────────────────────────────────────────
     print("\n  [AI] Running highest-level multi-agent civilization AI...")

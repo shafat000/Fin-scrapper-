@@ -39,7 +39,8 @@ def _save(memory: dict) -> None:
 # ── Episodic Memory ───────────────────────────────────────────────────────────
 
 def store_episode(regime: str, top_trade: str, bias: str,
-                  vix: float, fear_greed: int, reflection_summary: str) -> None:
+                  vix: float, fear_greed: int, reflection_summary: str,
+                  price: float = None) -> None:
     """Store a market episode for future pattern matching."""
     memory = _load()
     episode = {
@@ -50,6 +51,7 @@ def store_episode(regime: str, top_trade: str, bias: str,
         "vix":         vix,
         "fear_greed":  fear_greed,
         "reflection":  reflection_summary,
+        "price_at_time": price,
     }
     memory["episodic"].append(episode)
     # Keep last 50 episodes
@@ -124,6 +126,7 @@ def store_reflection(pipeline_output: dict) -> None:
         "bias":                 final.get("overall_market_bias"),
         "top_opportunity":      final.get("top_opportunity"),
         "biggest_risk":         final.get("biggest_risk"),
+        "final_trades":         final.get("final_trades", []),
         "pipeline_consistency": reflection.get("pipeline_consistency"),
         "blind_spots":          reflection.get("blind_spots", []),
         "adaptation_signals":   reflection.get("adaptation_signals", []),
