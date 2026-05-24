@@ -81,3 +81,9 @@ This system doesn't just scrape data; it applies advanced quantitative finance m
 ## ⚠️ Disclaimer
 
 This project is for **educational and research purposes only**. It is not financial advice. The models and AI outputs are probabilistic and should be verified. Trading involves risk. Review [TradingView's Terms of Service](https://www.tradingview.com/policies/) before commercial use.
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
